@@ -30,7 +30,7 @@
                         <select id="filtroCarreraAlu" class="form-select" onchange="cargarAlumnos()"></select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-black w-100" onclick="cargarAlumnos()">Buscar</button>
+                        <button class="btn btn-black w-100" onclick="cargarAlumnos()">Filtrar</button>
                     </div>
                 </div>
             </div>
@@ -83,7 +83,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-black w-100" onclick="cargarCursosAdmin()">Buscar</button>
+                        <button class="btn btn-black w-100" onclick="cargarCursosAdmin()">Filtrar</button>
                     </div>
                 </div>
             </div>
@@ -108,7 +108,7 @@
                         <select id="filtroCarreraHor" class="form-select" onchange="cargarTablaHorarios()"></select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-black w-100" onclick="cargarTablaHorarios()">Ver</button>
+                        <button class="btn btn-black w-100" onclick="cargarTablaHorarios()">Filtrar</button>
                     </div>
                 </div>
             </div>
@@ -164,7 +164,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <input type="hidden" id="idHorarioEditar"> <div class="row g-3">
+                    <input type="hidden" id="idHorarioEditar"> 
+                    <div class="row g-3">
                         <div class="col-md-6">
                             <label class="fw-bold">1. Seleccionar Carrera</label>
                             <select id="asigCarrera" class="form-select" onchange="cargarDatosAsignacion()"></select>
@@ -209,10 +210,31 @@
                             <select id="asigMod" class="form-select">
                                 <option value="Presencial">Presencial</option>
                                 <option value="Virtual">Virtual</option>
-                                <option value="Híbrido">Híbrido</option>
+                                <option value="Híbrido">24/7</option>
                             </select>
                         </div>
                         <div class="col-md-3 d-flex align-items-end"><button onclick="guardarHorario()" class="btn btn-black w-100">GUARDAR</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConfirm" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-0 border-2 border-black">
+                <div class="modal-header bg-black text-white rounded-0">
+                    <h5 class="modal-title">Confirmación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <i class="fa fa-exclamation-circle fa-4x text-danger mb-3"></i>
+                    <p class="fs-5 fw-bold" id="msgConfirm">¿Está seguro?</p>
+                    <p class="text-muted small">Esta acción no se puede deshacer.</p>
+                    
+                    <div class="mt-4 d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-secondary rounded-0 px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" id="btnConfirmYes" class="btn btn-danger rounded-0 px-4">Sí, Eliminar</button>
                     </div>
                 </div>
             </div>
@@ -236,8 +258,12 @@
 
         const modalProf = new bootstrap.Modal(document.getElementById('modalNuevoProfe'));
         const modalAsig = new bootstrap.Modal(document.getElementById('modalAsignacion'));
+        const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirm')); // Nuevo Modal
+
         const toastEl = document.getElementById('liveToast');
         const toast = new bootstrap.Toast(toastEl);
+
+        let idEliminarTemp = null; // Variable para almacenar ID a eliminar
 
         // --- TOAST FUNCTION ---
         function mostrarToast(msg, bgClass = 'bg-primary') {
@@ -301,10 +327,9 @@
 
         // --- ASIGNACIÓN Y HORARIOS ---
         function abrirModalHorario() {
-            document.getElementById('idHorarioEditar').value = ''; // Limpia ID para indicar que es NUEVO
+            document.getElementById('idHorarioEditar').value = ''; 
             document.getElementById('modalTitleHorario').innerText = "Asignar Nuevo Horario";
             
-            // Resetear selects y campos
             document.getElementById('asigCarrera').value = 0;
             document.getElementById('asigCurso').innerHTML = '<option>Esperando...</option>'; document.getElementById('asigCurso').disabled = true;
             document.getElementById('asigProf').innerHTML = '<option>Esperando...</option>'; document.getElementById('asigProf').disabled = true;
@@ -322,18 +347,15 @@
             document.getElementById('idHorarioEditar').value = h.id;
             document.getElementById('modalTitleHorario').innerText = "Editar Horario";
             
-            // Llenar datos
             document.getElementById('asigSec').value = h.seccion;
             document.getElementById('asigVac').value = h.vacantes;
             document.getElementById('asigIni').value = h.hora_inicio;
             document.getElementById('asigFin').value = h.hora_fin;
             document.getElementById('asigMod').value = h.modalidad || 'Presencial';
             
-            // Marcar días
             const dias = h.dia.split(',').map(d=>d.trim());
             document.querySelectorAll('.chk-dia').forEach(cb => cb.checked = dias.includes(cb.value));
 
-            // Pre-cargar selects (Truco visual para no hacer fetch de nuevo)
             const sc = document.getElementById('asigCurso'); sc.innerHTML = `<option value="${h.curso_id}" selected>${h.curso_nombre}</option>`; sc.disabled = false;
             const sp = document.getElementById('asigProf'); sp.innerHTML = `<option value="${h.profesor_id}" selected>${h.profesor_nombre}</option>`; sp.disabled = false;
             
@@ -341,12 +363,33 @@
             modalAsig.show();
         }
 
-        async function eliminarHorario(id) {
-            if(!confirm("¿Seguro de eliminar este horario?")) return;
-            const res = await fetch(API_HOR+'/eliminar-horario', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})});
-            if(res.ok) { mostrarToast("🗑️ Eliminado", "bg-warning"); cargarTablaHorarios(); }
-            else mostrarToast("Error al eliminar", "bg-danger");
+        // --- LÓGICA DE ELIMINACIÓN CON MODAL ---
+        function eliminarHorario(id) {
+            idEliminarTemp = id;
+            document.getElementById('msgConfirm').innerText = "¿Seguro que desea eliminar este horario?";
+            modalConfirm.show();
         }
+
+        // Listener del botón "SÍ" del modal
+        document.getElementById('btnConfirmYes').addEventListener('click', async () => {
+            modalConfirm.hide();
+            if(!idEliminarTemp) return;
+
+            const res = await fetch(API_HOR+'/eliminar-horario', {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({id: idEliminarTemp})
+            });
+
+            if(res.ok) { 
+                mostrarToast("🗑️ Eliminado", "bg-warning"); 
+                cargarTablaHorarios(); 
+            } else { 
+                mostrarToast("Error al eliminar", "bg-danger"); 
+            }
+            idEliminarTemp = null; // Reset
+        });
+        // ----------------------------------------
 
         async function cargarDatosAsignacion() {
             const cid = document.getElementById('asigCarrera').value;

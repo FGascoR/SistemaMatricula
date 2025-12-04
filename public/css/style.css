@@ -156,59 +156,67 @@ body {
     color: var(--black);
 }
 
-/* --- HORARIO GRID --- */
+/* --- HORARIO GRID (MEJORADO) --- */
 .timetable {
     display: grid;
-    grid-template-columns: 80px repeat(6, 1fr);
+    /* Columna hora (60px) + 6 columnas de dias */
+    grid-template-columns: 60px repeat(6, 1fr);
+    /* Header (40px) + 14 filas de horas (60px c/u) */
+    grid-template-rows: 40px repeat(14, 60px); 
     border: 2px solid var(--black);
     background: var(--white);
+    position: relative; /* Para contener elementos absolutos si fuera necesario */
 }
 
-.time-header, .day-header {
+.day-header {
     background: var(--black);
     color: var(--white);
-    padding: 12px;
-    text-align: center;
     font-weight: bold;
     text-transform: uppercase;
-    font-size: 0.9rem;
-    border: 1px solid #333;
-}
-
-.time-slot {
-    border: 1px solid #e0e0e0;
-    height: 70px;
+    font-size: 0.8rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 0.85rem;
+    border: 1px solid #333;
+}
+
+/* Las celdas de hora y vacías deben tener altura exacta */
+.time-header, .time-slot {
+    height: 60px; /* 1 hora = 60px */
+    border: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
     color: #666;
     background: #f8f9fa;
 }
 
 .course-cell {
-    background: var(--white);
     border: 1px solid #eee;
-    position: relative;
-    padding: 1px;
+    height: 60px; /* Importante para mantener la rejilla */
+    background: white;
 }
 
+/* El bloque del curso flotante */
 .event-block {
     background: var(--black);
     color: var(--white);
-    width: 95%;
-    height: 95%;
-    margin: 2.5% auto;
+    width: 90%;
+    margin-left: 5%;
+    border-radius: 4px;
+    padding: 5px;
+    font-size: 0.75rem;
+    text-align: center;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-shadow: 3px 3px 0px rgba(0,0,0,0.2);
-    cursor: default;
-    transition: transform 0.2s;
-}
-.event-block:hover {
-    transform: scale(1.02);
+    z-index: 10;
+    line-height: 1.2;
+    
+    /* --- CAMBIOS CRUCIALES --- */
+    position: absolute;  /* <--- ESTO ES LO QUE FALTA */
+    align-self: start;   /* Asegura que el margin-top se mida desde arriba */
 }
