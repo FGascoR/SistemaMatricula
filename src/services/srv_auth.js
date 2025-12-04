@@ -4,61 +4,99 @@ const { sendResponse, getBody, corsHeaders, queryMySQL } = require('../utils/uti
 
 const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders); res.end(); return; }
+    
+    const url = req.url; 
+    const method = req.method;
 
-    if (req.url === '/api/login' && req.method === 'POST') {
+    // --- 1. LOGIN ---
+    if (url === '/api/login' && method === 'POST') {
         try {
-            const { correo, contrasena } = await getBody(req); 
-            
-            const users = await queryMySQL('SELECT * FROM usuarios WHERE correo = ?', [correo]);
+            const { correo, contrasena } = await getBody(req);
+            let user = null;
+            let table = '';
 
-            if (users.length === 0) {
-                return sendResponse(res, 401, { error: 'Usuario no encontrado' });
+            // Búsqueda en cascada
+            let results = await queryMySQL('SELECT * FROM admins WHERE correo = ?', [correo]);
+            if (results.length > 0) { user = results[0]; table = 'admin'; }
+            else {
+                results = await queryMySQL('SELECT * FROM profesores WHERE correo = ?', [correo]);
+                if (results.length > 0) { user = results[0]; table = 'profesor'; }
+                else {
+                    results = await queryMySQL('SELECT * FROM alumnos WHERE correo = ?', [correo]);
+                    if (results.length > 0) { user = results[0]; table = 'alumno'; }
+                }
             }
 
-            const usuario = users[0];
+            if (!user) return sendResponse(res, 401, { error: 'Usuario no encontrado' });
 
-            const contrasenaEsCorrecta = await bcrypt.compare(contrasena, usuario.contrasena);
+            const passOk = await bcrypt.compare(contrasena, user.contrasena);
+            if (!passOk) return sendResponse(res, 401, { error: 'Contraseña incorrecta' });
 
-            if (contrasenaEsCorrecta) {
-                sendResponse(res, 200, { 
-                    success: true, 
-                    user: { 
-                        id: usuario.id, 
-                        nombre: usuario.nombre,
-                        ciclo: usuario.ciclo 
-                    } 
-                });
-            } else {
-                sendResponse(res, 401, { error: 'Contraseña incorrecta' });
-            }
+            sendResponse(res, 200, { 
+                success: true, 
+                user: { 
+                    id: user.id, 
+                    nombre: user.nombre, 
+                    rol: table, 
+                    ciclo: user.ciclo || 0,       
+                    carrera_id: user.carrera_id || 0 
+                } 
+            });
 
-        } catch (e) {
-            console.error(e);
-            sendResponse(res, 500, { error: 'Error interno' });
-        }
+        } catch (e) { console.error(e); sendResponse(res, 500, { error: e.message }); }
     } 
 
-    else if (req.url === '/api/register' && req.method === 'POST') {
-        try {
-            const { correo, contrasena, nombre, ciclo } = await getBody(req);
+    // --- 2. LISTAR USUARIOS (CORREGIDO PARA PROFESORES) ---
+    else if (url.startsWith('/api/usuarios') && method === 'GET') {
+        const params = new URLSearchParams(url.split('?')[1]);
+        const rol = params.get('rol'); 
+        const carrera = params.get('carrera');
 
-            const contrasenaHash = await bcrypt.hash(contrasena, 10);
+        let sql = '';
+        let args = [];
 
-            await queryMySQL(
-                'INSERT INTO usuarios (correo, contrasena, nombre, ciclo) VALUES (?, ?, ?, ?)', 
-                [correo, contrasenaHash, nombre, ciclo || 1]
-            );
-
-            sendResponse(res, 201, { success: true, msg: "Usuario creado" });
-        } catch (e) {
-            console.error(e);
-            sendResponse(res, 500, { error: 'Error al registrar (posible duplicado)' });
+        if (rol === 'alumno') {
+            sql = `SELECT a.id, a.nombre, a.correo, a.ciclo, c.nombre as carrera 
+                   FROM alumnos a 
+                   LEFT JOIN carreras c ON a.carrera_id = c.id WHERE 1=1`;
+            if (carrera && carrera !== '0') { sql += ' AND a.carrera_id = ?'; args.push(carrera); }
+        } 
+        // AQUÍ ESTABA EL DETALLE: AHORA HACEMOS JOIN CON CARRERAS TAMBIÉN PARA PROFESORES
+        else if (rol === 'profesor') {
+            sql = `SELECT p.id, p.nombre, p.correo, c.nombre as carrera 
+                   FROM profesores p 
+                   LEFT JOIN carreras c ON p.carrera_id = c.id WHERE 1=1`;
+            if (carrera && carrera !== '0') { sql += ' AND p.carrera_id = ?'; args.push(carrera); }
         }
+
+        const data = await queryMySQL(sql, args);
+        sendResponse(res, 200, data);
+    }
+
+    // --- 3. CREAR USUARIO ---
+    else if (url === '/api/usuarios' && method === 'POST') {
+        try {
+            const b = await getBody(req); 
+            const hash = await bcrypt.hash(b.contrasena, 10);
+
+            if (b.rol === 'profesor') {
+                await queryMySQL('INSERT INTO profesores (nombre, correo, contrasena, carrera_id) VALUES (?,?,?,?)', 
+                    [b.nombre, b.correo, hash, b.carrera_id || 1]);
+            } else if (b.rol === 'alumno') {
+                await queryMySQL('INSERT INTO alumnos (nombre, correo, contrasena, ciclo, carrera_id) VALUES (?,?,?,?,?)', 
+                    [b.nombre, b.correo, hash, b.ciclo || 1, b.carrera_id || 1]);
+            }
+            sendResponse(res, 201, { msg: 'Usuario creado' });
+        } catch (e) { console.error(e); sendResponse(res, 500, { error: 'Error (correo duplicado)' }); }
+    }
+
+    // --- 4. DATOS MAESTROS ---
+    else if (url === '/api/carreras' && method === 'GET') {
+        const data = await queryMySQL('SELECT * FROM carreras');
+        sendResponse(res, 200, data);
     }
     
-    else {
-        sendResponse(res, 404, { error: 'Ruta no encontrada' });
-    }
+    else { sendResponse(res, 404, { error: 'Ruta no encontrada' }); }
 });
 
-server.listen(3001, () => console.log('🔒 Srv Auth (MySQL) corriendo en 3001'));
+server.listen(3001, () => console.log('🔒 Srv Auth (Fix Profesores) corriendo en 3001'));

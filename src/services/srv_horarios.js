@@ -4,21 +4,102 @@ const { sendResponse, getBody, corsHeaders } = require('../utils/utils');
 
 http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders); res.end(); return; }
+    
+    const url = req.url; const method = req.method;
 
-    if (req.url === '/api/horarios' && req.method === 'POST') {
+    // 1. ADMIN: LISTAR HORARIOS
+    if (url.startsWith('/api/horarios-todos') && method === 'GET') {
+        try {
+            const carreraId = new URLSearchParams(url.split('?')[1]).get('carrera');
+            let sql = `
+                SELECT h.id, h.seccion, h.dia, h.hora_inicio, h.hora_fin, h.vacantes, h.modalidad,
+                       h.profesor_nombre, c.nombre as curso_nombre, c.ciclo 
+                FROM horarios h
+                JOIN cursos c ON h.curso_id = c.id
+            `;
+            let params = [];
+            if (carreraId && carreraId !== '0') {
+                sql += ' WHERE c.carrera_id = $1';
+                params.push(carreraId);
+            }
+            sql += ' ORDER BY c.ciclo, h.seccion, h.dia'; 
+            const result = await queryPostgres(sql, params);
+            sendResponse(res, 200, result.rows);
+        } catch (e) { sendResponse(res, 500, { error: e.message }); }
+    }
+
+    // 2. ADMIN: ASIGNAR NUEVO HORARIO (CON VALIDACIÓN DE CRUCES)
+    else if (url === '/api/asignar-horario' && method === 'POST') {
+        try {
+            const b = await getBody(req);
+            // b = { profesor_id, dia (string "Lun, Mar"), inicio, fin ... }
+
+            // --- PASO A: VALIDACIÓN DE CRUCE DE PROFESOR ---
+            
+            // 1. Obtenemos todos los horarios que ya tiene este profesor
+            const horariosProfe = await queryPostgres('SELECT * FROM horarios WHERE profesor_id = $1', [b.profesor_id]);
+            
+            // 2. Preparamos los datos del nuevo horario para comparar
+            const nuevosDias = b.dia.split(',').map(d => d.trim());
+            const nuevoInicio = parseInt(b.inicio.replace(':', '')); // Ej: "08:00" -> 800
+            const nuevoFin = parseInt(b.fin.replace(':', ''));
+
+            // 3. Recorremos sus horarios existentes buscando choques
+            for (let h of horariosProfe.rows) {
+                const diasExistentes = h.dia.split(',').map(d => d.trim());
+                
+                // ¿Hay coincidencia de días? (Intersección de arrays)
+                const coincidenDias = nuevosDias.some(d => diasExistentes.includes(d));
+
+                if (coincidenDias) {
+                    // Normalizamos horas de la BD (pueden venir como "08:00:00")
+                    const exInicio = parseInt(h.hora_inicio.substring(0, 5).replace(':', ''));
+                    const exFin = parseInt(h.hora_fin.substring(0, 5).replace(':', ''));
+
+                    // Fórmula de cruce: (InicioA < FinB) y (FinA > InicioB)
+                    if (nuevoInicio < exFin && nuevoFin > exInicio) {
+                        return sendResponse(res, 409, { 
+                            error: `CRUCE: El profesor ya tiene clase el ${h.dia} (${h.hora_inicio.slice(0,5)} - ${h.hora_fin.slice(0,5)})` 
+                        });
+                    }
+                }
+            }
+
+            // --- PASO B: SI NO HAY CRUCE, GUARDAMOS ---
+            await queryPostgres(
+                'INSERT INTO horarios (curso_id, seccion, profesor_id, profesor_nombre, dia, hora_inicio, hora_fin, vacantes, modalidad) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [b.curso_id, b.seccion, b.profesor_id, b.profesor_nombre, b.dia, b.inicio, b.fin, b.vacantes, b.modalidad]
+            );
+            sendResponse(res, 201, { msg: 'Horario asignado correctamente' });
+
+        } catch (e) { 
+            console.error(e); 
+            sendResponse(res, 500, { error: e.message }); 
+        }
+    }
+
+    // 3. VER HORARIOS ALUMNO
+    else if (url === '/api/horarios' && method === 'POST') {
         const { curso_id } = await getBody(req);
-        const result = await queryPostgres('SELECT * FROM horarios WHERE curso_id = $1', [curso_id]);
+        const result = await queryPostgres('SELECT * FROM horarios WHERE curso_id = $1 ORDER BY seccion', [curso_id]);
         sendResponse(res, 200, result.rows);
     }
 
-    else if (req.url === '/api/restar-vacante' && req.method === 'PUT') {
-        try {
-            const { horario_id } = await getBody(req);
-            await queryPostgres('UPDATE horarios SET vacantes = vacantes - 1 WHERE id = $1', [horario_id]);
-            sendResponse(res, 200, { msg: 'Vacante actualizada' });
-        } catch (e) {
-            console.error(e);
-            sendResponse(res, 500, { error: 'Error actualizando vacantes' });
-        }
+    // 4. RESTAR VACANTE
+    else if (url === '/api/restar-vacante' && method === 'PUT') {
+        const { seccion, curso_id } = await getBody(req);
+        await queryPostgres('UPDATE horarios SET vacantes = vacantes - 1 WHERE curso_id = $1 AND seccion = $2', [curso_id, seccion]);
+        sendResponse(res, 200, { msg: 'Ok' });
     }
-}).listen(3003, () => console.log('Srv Horarios (PG): 3003'));
+
+    // 5. PROFE
+    else if (url.startsWith('/api/mis-horarios-profe') && method === 'GET') {
+        const pid = new URLSearchParams(url.split('?')[1]).get('id');
+        const sql = `SELECT h.*, c.nombre as curso_nombre, c.codigo FROM horarios h JOIN cursos c ON h.curso_id = c.id WHERE h.profesor_id = $1`;
+        const result = await queryPostgres(sql, [pid]);
+        sendResponse(res, 200, result.rows);
+    }
+    
+    else { sendResponse(res, 404, { error: 'Ruta no encontrada' }); }
+
+}).listen(3003, () => console.log('Srv Horarios (Validado) corriendo en 3003'));

@@ -5,22 +5,23 @@ const { sendResponse, corsHeaders } = require('../utils/utils');
 http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders); res.end(); return; }
 
+    // GET /api/cursos?carrera=1&ciclo=5
     if (req.url.startsWith('/api/cursos') && req.method === 'GET') {
         try {
-            const urlParams = new URLSearchParams(req.url.split('?')[1]);
-            const ciclo = urlParams.get('ciclo');
+            const params = new URLSearchParams(req.url.split('?')[1]);
+            const carrera = params.get('carrera');
+            const ciclo = params.get('ciclo');
 
-            let query = 'SELECT * FROM cursos';
-            let params = [];
+            let query = 'SELECT * FROM cursos WHERE 1=1';
+            let args = [];
+            let i = 1;
 
-            if (ciclo) {
-                query += ' WHERE ciclo = $1 ORDER BY nombre';
-                params.push(ciclo);
-            } else {
-                query += ' ORDER BY ciclo, nombre';
-            }
+            if (carrera && carrera !== '0') { query += ` AND carrera_id = $${i++}`; args.push(carrera); }
+            if (ciclo && ciclo !== '0') { query += ` AND ciclo = $${i++}`; args.push(ciclo); }
+            
+            query += ' ORDER BY ciclo, nombre';
 
-            const result = await queryPostgres(query, params);
+            const result = await queryPostgres(query, args);
             sendResponse(res, 200, result.rows);
         } catch (e) { 
             console.error(e);
