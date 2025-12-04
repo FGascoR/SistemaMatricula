@@ -1,0 +1,214 @@
+:root {
+    --sidebar-collapsed: 70px;
+    --sidebar-expanded: 250px;
+    --black: #000;
+    --white: #fff;
+    --gray: #f4f4f4;
+    --hover-bg: #222;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--gray);
+    overflow-x: hidden;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-collapsed);
+    background: var(--black);
+    transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 1000;
+    overflow: hidden;
+    white-space: nowrap;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+}
+
+.sidebar:hover {
+    width: var(--sidebar-expanded);
+}
+
+.sidebar-header {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    color: var(--white);
+    font-weight: bold;
+    font-size: 1.2rem;
+    border-bottom: 1px solid #333;
+    overflow: hidden;
+}
+
+.sidebar-header i {
+    min-width: var(--sidebar-collapsed);
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+.sidebar-header span {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    margin-left: 10px;
+}
+
+.sidebar:hover .sidebar-header span {
+    opacity: 1;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.sidebar-menu li {
+    width: 100%;
+}
+
+.sidebar-menu a {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    color: #bbb;
+    text-decoration: none;
+    transition: 0.3s;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+}
+
+.sidebar-menu a:hover, 
+.sidebar-menu a.active {
+    color: var(--white);
+    background-color: var(--hover-bg);
+    border-left-color: var(--white);
+}
+
+.sidebar-menu i {
+    min-width: var(--sidebar-collapsed);
+    text-align: center;
+    font-size: 1.4rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.sidebar-menu span {
+    font-size: 1rem;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 0.3s ease;
+}
+
+.sidebar:hover .sidebar-menu span {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.text-danger:hover i, .text-danger:hover span {
+    color: #ff4d4d !important;
+}
+
+/* --- CONTENIDO PRINCIPAL --- */
+.main-content {
+    margin-left: var(--sidebar-collapsed);
+    padding: 30px;
+    transition: margin-left 0.4s ease;
+}
+
+.section-view {
+    display: none;
+    animation: slideUp 0.5s ease;
+}
+.section-view.active {
+    display: block;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- COMPONENTES --- */
+.card-custom {
+    background: var(--white);
+    border: 1px solid var(--black);
+    padding: 20px;
+    box-shadow: 6px 6px 0px rgba(0,0,0,0.15);
+    margin-bottom: 20px;
+}
+
+.btn-black {
+    background: var(--black);
+    color: var(--white);
+    border: 2px solid var(--black);
+    border-radius: 0;
+    padding: 8px 25px;
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: 0.2s;
+}
+.btn-black:hover {
+    background: var(--white);
+    color: var(--black);
+}
+
+/* --- HORARIO GRID --- */
+.timetable {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    border: 2px solid var(--black);
+    background: var(--white);
+}
+
+.time-header, .day-header {
+    background: var(--black);
+    color: var(--white);
+    padding: 12px;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    border: 1px solid #333;
+}
+
+.time-slot {
+    border: 1px solid #e0e0e0;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #666;
+    background: #f8f9fa;
+}
+
+.course-cell {
+    background: var(--white);
+    border: 1px solid #eee;
+    position: relative;
+    padding: 1px;
+}
+
+.event-block {
+    background: var(--black);
+    color: var(--white);
+    width: 95%;
+    height: 95%;
+    margin: 2.5% auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 3px 3px 0px rgba(0,0,0,0.2);
+    cursor: default;
+    transition: transform 0.2s;
+}
+.event-block:hover {
+    transform: scale(1.02);
+}
