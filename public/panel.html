@@ -68,6 +68,7 @@
         </section>
     </main>
 
+    <!-- Modal Elegir Sección -->
     <div class="modal fade" id="modalSeccion" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content rounded-0 border-2 border-black">
@@ -90,6 +91,34 @@
                         </thead>
                         <tbody id="modal-lista-horarios"></tbody>
                     </table>
+                </div>
+                <!-- BOTÓN NUEVO -->
+                <div class="modal-footer bg-light">
+                    <span class="small text-muted me-auto">¿No encuentras horario?</span>
+                    <button onclick="abrirConfirmarSolicitud()" class="btn btn-outline-danger btn-sm">
+                        <i class="fa-regular fa-hand-paper"></i> Solicitar Apertura de Aula
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Solicitud -->
+    <div class="modal fade" id="modalConfirmarSolicitud" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-0 border-2 border-black">
+                <div class="modal-header bg-danger text-white rounded-0">
+                    <h5 class="modal-title">Confirmar Solicitud</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <i class="fa-solid fa-bullhorn fa-3x text-danger mb-3"></i>
+                    <p class="fs-5">¿Deseas solicitar la apertura de un nuevo horario para este curso?</p>
+                    <p class="text-muted small">Tu solicitud será enviada a la administración académica para su evaluación.</p>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-secondary rounded-0" data-bs-dismiss="modal">Cancelar</button>
+                        <button onclick="enviarSolicitud()" class="btn btn-danger rounded-0 px-4">Sí, Solicitar</button>
+                    </div>
                 </div>
             </div>
         </div>

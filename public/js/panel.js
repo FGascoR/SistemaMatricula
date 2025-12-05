@@ -3,11 +3,12 @@ let cursosDisponibles = [];
 let matricula = []; 
 let cursoTemp = null;
 const modal = new bootstrap.Modal(document.getElementById('modalSeccion'));
+const modalSolicitud = new bootstrap.Modal(document.getElementById('modalConfirmarSolicitud')); // NUEVO
 const toastEl = document.getElementById('liveToast');
 const toast = new bootstrap.Toast(toastEl);
 
 const USUARIO_ID = localStorage.getItem('usuario_id');
-const USUARIO_NOMBRE = localStorage.getItem('usuario_nombre');
+// const USUARIO_NOMBRE = localStorage.getItem('usuario_nombre'); // YA NO SE USA AQUÍ PARA SOLICITUDES
 
 // Verificar sesión
 if (!USUARIO_ID) window.location.href = 'index.html';
@@ -28,7 +29,10 @@ function mostrarToast(msg, bgClass = 'bg-primary') {
 async function cargarCursosBackend() {
     try {
         const cicloUsuario = localStorage.getItem('usuario_ciclo') || 1;
-        const res = await fetch(`http://localhost:3002/api/cursos?ciclo=${cicloUsuario}`);
+        const carreraUsuario = localStorage.getItem('usuario_carrera') || 0; 
+        
+        const res = await fetch(`http://localhost:3002/api/cursos?ciclo=${cicloUsuario}&carrera=${carreraUsuario}`);
+        
         cursosDisponibles = await res.json();
         renderizarCursosDisponibles();
     } catch (e) { console.error(e); }
@@ -52,6 +56,11 @@ async function cargarMatriculaGuardada() {
 function renderizarCursosDisponibles() {
     const container = document.getElementById('lista-cursos-disponibles');
     container.innerHTML = '';
+    
+    if (cursosDisponibles.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">No hay cursos disponibles para tu carrera y ciclo actual.</div>';
+        return;
+    }
     
     cursosDisponibles.forEach(curso => {
         const yaInscrito = matricula.find(m => m.curso.id === curso.id);
@@ -87,6 +96,11 @@ async function abrirModal(idCurso) {
     const horarios = await res.json();
     
     tbody.innerHTML = '';
+    
+    if (horarios.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No hay horarios asignados aún.</td></tr>';
+    }
+
     horarios.forEach(h => {
         const hString = encodeURIComponent(JSON.stringify(h));
         
@@ -107,22 +121,82 @@ async function abrirModal(idCurso) {
             btnHTML = `<button onclick="agregarCurso('${hString}')" class="btn btn-sm btn-dark">Elegir</button>`;
         }
 
+        let modBadge = 'bg-light text-dark border';
+        if (h.modalidad === 'Virtual') modBadge = 'bg-info text-dark';
+        if (h.modalidad === '24/7' || h.modalidad === 'Híbrido') modBadge = 'bg-purple text-white';
+
+        // CORRECCIÓN VISUAL HORA EN MODAL
+        let horarioTexto = '';
+        if (h.hora_inicio && h.hora_fin) {
+            horarioTexto = `${h.hora_inicio.slice(0,5)} - ${h.hora_fin.slice(0,5)}`;
+        } else {
+            horarioTexto = '<span class="">24/7</span>';
+        }
+
         tbody.innerHTML += `
         <tr class="${rowClass}">
             <td class="fw-bold">${h.seccion}</td>
             <td>${h.profesor_nombre || 'Por asignar'}</td>
             <td>${h.dia}</td>
-            <td>${h.hora_inicio.slice(0,5)} - ${h.hora_fin.slice(0,5)}</td>
-            <td><span class="badge bg-light text-dark border">${h.modalidad || 'Presencial'}</span></td>
+            <td>${horarioTexto}</td>
+            <td><span class="badge ${modBadge}" style="${h.modalidad==='24/7'?'background-color:#6f42c1;color:white':''}">${h.modalidad || 'Presencial'}</span></td>
             <td class="text-center">${vacantesHTML}</td>
             <td>${btnHTML}</td>
         </tr>`;
     });
 }
 
+// --- NUEVAS FUNCIONES PARA SOLICITUDES ---
+function abrirConfirmarSolicitud() {
+    // Cerramos el modal de horarios momentáneamente
+    modal.hide(); 
+    modalSolicitud.show();
+}
+
+async function enviarSolicitud() {
+    try {
+        const body = {
+            // usuario_id: parseInt(USUARIO_ID), // SE ELIMINA ID
+            // alumno_nombre: USUARIO_NOMBRE, // SE ELIMINA NOMBRE
+            curso_id: cursoTemp.id,
+            curso_nombre: cursoTemp.nombre,
+            ciclo: cursoTemp.ciclo,
+            carrera_id: parseInt(localStorage.getItem('usuario_carrera') || 0)
+        };
+
+        const res = await fetch('http://localhost:3006/api/solicitudes', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+
+        if(res.ok) {
+            mostrarToast("✅ Solicitud enviada exitosamente", "bg-success");
+        } else {
+            mostrarToast("⛔ Error al enviar solicitud", "bg-danger");
+        }
+    } catch (e) {
+        mostrarToast("⛔ Error de conexión", "bg-danger");
+        console.error(e);
+    } finally {
+        modalSolicitud.hide();
+    }
+}
+
 // --- AGREGAR CURSO TEMPORALMENTE (CON VALIDACIÓN DE CRUCES) ---
 function agregarCurso(hString) {
     const horario = JSON.parse(decodeURIComponent(hString));
+    
+    // SI ES 24/7 NO HAY CRUCE DE HORAS POSIBLE
+    if (!horario.hora_inicio || !horario.hora_fin) {
+        matricula.push({ curso: cursoTemp, horario: horario });
+        actualizarResumen();
+        renderizarCursosDisponibles();
+        modal.hide();
+        mostrarToast(`Curso agregado: ${cursoTemp.nombre}`, "bg-success");
+        return;
+    }
+
     const nInicio = parseInt(horario.hora_inicio.replace(':',''));
     const nFin = parseInt(horario.hora_fin.replace(':',''));
     
@@ -131,18 +205,20 @@ function agregarCurso(hString) {
 
     // Validar Cruce
     for(let m of matricula) {
-        // Array de días del curso ya matriculado
-        const diasMatriculado = m.horario.dia.split(',').map(s => s.trim());
+        if (m.curso.id === cursoTemp.id) {
+             return mostrarToast("⛔ Ya tienes este curso agregado.", "bg-warning");
+        }
 
-        // Ver si tienen algún día en común
+        // Si el curso matriculado es 24/7, saltamos validación de horas
+        if (!m.horario.hora_inicio || !m.horario.hora_fin) continue;
+
+        const diasMatriculado = m.horario.dia.split(',').map(s => s.trim());
         const coincidenDias = diasNuevo.some(d => diasMatriculado.includes(d));
 
         if(coincidenDias) {
             const eInicio = parseInt(m.horario.hora_inicio.replace(':',''));
             const eFin = parseInt(m.horario.hora_fin.replace(':',''));
             
-            // Si coinciden en día y hora -> ERROR
-            // Fórmula de intersección: (StartA < EndB) && (EndA > StartB)
             if(nInicio < eFin && nFin > eInicio) {
                 return mostrarToast("⛔ Cruce de horario con " + m.curso.nombre, "bg-danger");
             }
@@ -167,10 +243,9 @@ function actualizarResumen() {
 async function confirmarMatricula() {
     if(matricula.length === 0) return mostrarToast("⚠️ Selecciona cursos primero.", "bg-warning");
     
-    // 1. Guardar en Mongo (Historial del Alumno)
     const data = {
         usuario_id: parseInt(USUARIO_ID),
-        alumno_nombre: USUARIO_NOMBRE,
+        alumno_nombre: localStorage.getItem('usuario_nombre'), // Usamos nombre aqui solo para mongo matriculas
         cursos: matricula,
         total_creditos: document.getElementById('contador-creditos').innerText
     };
@@ -179,9 +254,7 @@ async function confirmarMatricula() {
         method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
     });
 
-    // 2. Restar Vacantes en Postgres
     for(let item of matricula) {
-        // Ojo: Envia 'horario_id' que coincide con el backend corregido
         await fetch('http://localhost:3003/api/restar-vacante', {
             method:'PUT', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ horario_id: item.horario.id })
@@ -209,9 +282,16 @@ function renderizarTablaMisCursos() {
     }
 
     matricula.forEach(m => {
-        // Formatear días para que se vea limpio (ej: Lunes, Miercoles -> Lunes / Miercoles)
         const diasFormat = m.horario.dia.replace(/,/g, ' / ');
         
+        // CORRECCIÓN VISUAL PARA 24/7 EN TABLA MIS CURSOS
+        let horarioTexto = '';
+        if (m.horario.hora_inicio && m.horario.hora_fin) {
+            horarioTexto = `${m.horario.hora_inicio.slice(0,5)} - ${m.horario.hora_fin.slice(0,5)}`;
+        } else {
+            horarioTexto = '<span class="">24/7 (24/7)</span>';
+        }
+
         tbody.innerHTML += `
         <tr>
             <td class="fw-bold">${m.curso.codigo}</td>
@@ -220,26 +300,23 @@ function renderizarTablaMisCursos() {
             <td>${m.horario.profesor_nombre || 'Docente'}</td>
             <td>
                 <div class="small fw-bold">${diasFormat}</div>
-                <div class="small text-muted">${m.horario.hora_inicio.slice(0,5)} - ${m.horario.hora_fin.slice(0,5)}</div>
+                <div class="small text-muted">${horarioTexto}</div>
             </td>
             <td class="text-center">${m.curso.creditos}</td>
         </tr>`;
     });
 }
 
-// 2. Dibujar Horario Visual (Grid CSS Exacto)
 // 2. Dibujar Horario Visual (VERSIÓN FINAL - CENTRADO ROBUSTO)
 function dibujarHorarioEnGrid() {
     const grid = document.getElementById('timetable-grid');
     grid.innerHTML = ''; 
 
-    // A. HEADERS
     const dias = ['Hora', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
     dias.forEach(d => {
         grid.innerHTML += `<div class="day-header">${d}</div>`;
     });
 
-    // B. FONDO REJILLA
     const horaInicioGrid = 8;
     const horaFinGrid = 22;
 
@@ -251,7 +328,6 @@ function dibujarHorarioEnGrid() {
         }
     }
 
-    // C. PINTAR BLOQUES
     const mapDias = { 
         'lunes': 2, 'martes': 3, 'miercoles': 4, 
         'jueves': 5, 'viernes': 6, 'sabado': 7,
@@ -259,6 +335,10 @@ function dibujarHorarioEnGrid() {
     };
 
     matricula.forEach(m => {
+        // --- CORRECCIÓN IMPORTANTE ---
+        // Si el curso no tiene hora (es 24/7), NO intentamos dibujarlo en la grilla
+        if (!m.horario.hora_inicio || !m.horario.hora_fin) return;
+
         const [hIni, mIni] = m.horario.hora_inicio.split(':').map(Number);
         const [hFin, mFin] = m.horario.hora_fin.split(':').map(Number);
 
@@ -266,10 +346,8 @@ function dibujarHorarioEnGrid() {
         const finTotalMin = hFin * 60 + mFin;
         const duracionMin = finTotalMin - inicioTotalMin;
 
-        // Fila de inicio
         const gridRowStart = (hIni - horaInicioGrid) + 2; 
         
-        // Píxeles por minuto
         const pxPorMinuto = 1; 
         const marginTop = mIni * pxPorMinuto; 
         const height = duracionMin * pxPorMinuto; 
@@ -282,27 +360,28 @@ function dibujarHorarioEnGrid() {
             if (gridCol) {
                 const bloque = document.createElement('div');
                 bloque.className = 'event-block';
+                
+                if (m.horario.modalidad === 'Virtual') bloque.style.backgroundColor = '#0dcaf0'; 
+                // if (m.horario.modalidad === '24/7') ... (Ya no se dibuja en grid)
+                if (m.horario.modalidad === 'Virtual') bloque.style.color = '#000'; 
+
                 bloque.innerHTML = `
                     <div class="fw-bold text-truncate">${m.curso.nombre}</div>
                     <div>${m.horario.hora_inicio.slice(0,5)} - ${m.horario.hora_fin.slice(0,5)}</div>
-                    <div class="small text-warning">Sec. ${m.horario.seccion}</div>
+                    <div class="small" style="opacity:0.8">Sec. ${m.horario.seccion}</div>
                 `;
 
-                // 1. Ubicación en la rejilla
                 bloque.style.gridArea = `${gridRowStart} / ${gridCol} / auto / ${gridCol + 1}`;
                 bloque.style.position = 'absolute';
                 
-                // --- CORRECCIÓN DE CENTRADO ---
-                bloque.style.width = '94%';      // Ocupa el 94% del ancho de la columna
-                bloque.style.left = '0';         // Anclado a la izquierda
-                bloque.style.right = '0';        // Anclado a la derecha
-                bloque.style.marginLeft = 'auto'; // Margen automático
-                bloque.style.marginRight = 'auto';// Margen automático (esto centra el bloque)
+                bloque.style.width = '94%';      
+                bloque.style.left = '0';         
+                bloque.style.right = '0';        
+                bloque.style.marginLeft = 'auto'; 
+                bloque.style.marginRight = 'auto';
                 
-                // Limpiamos cualquier transform previo
                 bloque.style.transform = 'none'; 
                 
-                // Posición vertical y altura
                 bloque.style.marginTop = `${marginTop}px`; 
                 bloque.style.height = `${height}px`; 
                 bloque.style.zIndex = '10';

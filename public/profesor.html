@@ -42,10 +42,31 @@
             }
             
             data.forEach(c => {
-                // Determinamos color según modalidad
-                let badgeClass = 'bg-primary';
-                if(c.modalidad === 'Virtual') badgeClass = 'bg-info text-dark';
-                if(c.modalidad === 'Híbrido') badgeClass = 'bg-warning text-dark';
+                // --- LÓGICA DE ETIQUETAS Y COLORES ACTUALIZADA ---
+                let badgeClass = 'bg-primary'; // Default: Presencial (Azul)
+                let icon = 'fa-chalkboard-user';
+
+                if(c.modalidad === 'Virtual') {
+                    badgeClass = 'bg-info text-dark';
+                    icon = 'fa-laptop';
+                }
+                
+                // NUEVO: Soporte explícito para 24/7
+                if(c.modalidad === '24/7' || c.modalidad === 'Híbrido') {
+                    badgeClass = 'bg-success'; // Verde
+                    icon = 'fa-stopwatch';
+                }
+
+                // --- CORRECCIÓN VISUAL PARA HORARIOS NULL (24/7) ---
+                let horarioTexto = '';
+                if (c.hora_inicio && c.hora_fin) {
+                    horarioTexto = `${c.hora_inicio.slice(0,5)} - ${c.hora_fin.slice(0,5)}`;
+                } else {
+                    horarioTexto = '<span class="">24/7</span>';
+                }
+
+                // --- CORRECCIÓN PARA DÍAS NULL (24/7) ---
+                let diaTexto = c.dia === '24/7' ? '24/7' : c.dia;
 
                 container.innerHTML += `
                 <div class="card-custom mb-3 p-3 d-flex justify-content-between align-items-center">
@@ -53,13 +74,13 @@
                         <h5 class="fw-bold mb-1">${c.curso_nombre}</h5>
                         <div class="text-muted small">
                             <span class="me-3 fw-bold text-dark"><i class="fa fa-hashtag"></i> Sección: ${c.seccion}</span>
-                            <span class="me-3"><i class="fa fa-calendar"></i> ${c.dia}</span>
-                            <span class="me-3"><i class="fa fa-clock"></i> ${c.hora_inicio.slice(0,5)} - ${c.hora_fin.slice(0,5)}</span>
+                            <span class="me-3"><i class="fa fa-calendar"></i> ${diaTexto}</span>
+                            <span class="me-3"><i class="fa fa-clock"></i> ${horarioTexto}</span>
                         </div>
                     </div>
                     <div class="text-end">
                         <span class="badge ${badgeClass} p-2" style="font-size: 0.9rem">
-                            <i class="fa fa-laptop-house"></i> ${c.modalidad || 'Presencial'}
+                            <i class="fa ${icon}"></i> ${c.modalidad || 'Presencial'}
                         </span>
                     </div>
                 </div>`;

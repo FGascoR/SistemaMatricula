@@ -5,10 +5,11 @@ const servers = [
     'src/services/srv_cursos.js',    
     'src/services/srv_horarios.js',  
     'src/services/srv_inscrip.js',   
-    'src/services/srv_reportes.js'  
+    'src/services/srv_reportes.js',
+    'src/services/srv_solicitudes.js' 
 ];
 
-console.log('🚀 Iniciando SISTEMA DE MATRÍCULA (5 Microservicios)...');
+console.log('🚀 Iniciando SISTEMA DE MATRÍCULA (6 Microservicios)...');
 
 servers.forEach(serverFile => {
     const serverProcess = spawn('node', [serverFile], { stdio: 'inherit', shell: true });
