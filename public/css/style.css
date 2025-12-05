@@ -220,3 +220,32 @@ body {
     position: absolute;  /* <--- ESTO ES LO QUE FALTA */
     align-self: start;   /* Asegura que el margin-top se mida desde arriba */
 }
+/* En public/css/style.css */
+
+/* --- ESTILOS PARA CURSOS 24/7 (BARRAS SUPERIORES) --- */
+.virtual-course-banner {
+    background: #8e244d; /* Color vino similar a UTP */
+    color: white;
+    padding: 10px 15px;
+    margin-bottom: 8px; /* Espacio entre barras */
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 0.9rem;
+}
+
+.virtual-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 0.75rem;
+    margin-right: 10px;
+    text-transform: uppercase;
+}
+
+.virtual-course-name {
+    font-weight: 700;
+}

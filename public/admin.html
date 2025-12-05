@@ -15,6 +15,7 @@
             <li><a onclick="ver('profesores')" id="link-profesores"><i class="fa fa-chalkboard-user"></i><span>Profesores</span></a></li>
             <li><a onclick="ver('cursos')" id="link-cursos"><i class="fa fa-book"></i><span>Cursos</span></a></li>
             <li><a onclick="ver('asignacion')" id="link-asignacion"><i class="fa fa-calendar-check"></i><span>Horarios</span></a></li>
+            <li><a onclick="ver('matriculas')" id="link-matriculas"><i class="fa fa-file-signature"></i><span>Matrículas</span></a></li>
             <li><a onclick="ver('solicitudes')" id="link-solicitudes"><i class="fa fa-envelope-open-text"></i><span>Solicitudes</span></a></li>
             <li style="margin-top:50px"><a href="index.html" class="text-danger"><i class="fa fa-power-off"></i><span>Salir</span></a></li>
         </ul>
@@ -141,6 +142,57 @@
             </div>
         </section>
 
+        <!-- SECCIÓN MATRÍCULAS -->
+        <section id="view-matriculas" class="section-view">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">Gestión de Matrículas</h2>
+                <button class="btn btn-success btn-lg" onclick="abrirModalMatriculaManual()">
+                    <i class="fa fa-user-plus"></i> Generar Matrícula Manual
+                </button>
+            </div>
+
+            <div class="card-custom mb-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="fw-bold">Filtrar por Carrera</label>
+                        <select id="filtroCarreraMat" class="form-select" onchange="cargarMatriculasAdmin()"></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold">Filtrar por Ciclo</label>
+                        <select id="filtroCicloMat" class="form-select" onchange="cargarMatriculasAdmin()">
+                            <option value="0">Todos</option>
+                            <option value="1">Ciclo 1</option><option value="2">Ciclo 2</option><option value="3">Ciclo 3</option>
+                            <option value="4">Ciclo 4</option><option value="5">Ciclo 5</option><option value="6">Ciclo 6</option>
+                            <option value="7">Ciclo 7</option><option value="8">Ciclo 8</option><option value="9">Ciclo 9</option>
+                            <option value="10">Ciclo 10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-black w-100" onclick="cargarMatriculasAdmin()">Filtrar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-custom">
+                <div class="table-responsive">
+                    <table class="table table-hover border-black align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Carrera</th>
+                                <th>Cursos Matriculados</th>
+                                <th>Total Créditos</th>
+                                <th>Fecha Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-matriculas-admin">
+                            <tr><td colspan="5" class="text-center">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <!-- SECCIÓN SOLICITUDES -->
         <section id="view-solicitudes" class="section-view">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -154,7 +206,6 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>Fecha</th>
-                                <!-- Columna Alumno eliminada por privacidad -->
                                 <th>Curso</th>
                                 <th>Ciclo</th>
                                 <th>Estado</th>
@@ -209,12 +260,10 @@
                             <label class="fw-bold">2. Seleccionar Curso</label>
                             <select id="asigCurso" class="form-select" disabled><option>Esperando carrera...</option></select>
                         </div>
-                        
                         <div class="col-md-6">
                             <label class="fw-bold">3. Seleccionar Profesor</label>
                             <select id="asigProf" class="form-select" disabled><option>Esperando carrera...</option></select>
                         </div>
-                        
                         <div class="col-md-3">
                             <label>Sección</label>
                             <input id="asigSec" class="form-control" placeholder="Ej: 10599">
@@ -223,9 +272,7 @@
                             <label>Vacantes</label>
                             <input id="asigVac" type="number" class="form-control" value="30">
                         </div>
-
                         <div class="col-12"><hr></div>
-
                         <div class="col-md-12">
                             <label class="fw-bold d-block mb-2">Días de Clase (Seleccione uno o varios)</label>
                             <div class="d-flex gap-3 flex-wrap p-2 border rounded">
@@ -237,7 +284,6 @@
                                 <div class="form-check"><input class="form-check-input chk-dia" type="checkbox" value="Sabado" id="d6"><label class="form-check-label" for="d6">Sábado</label></div>
                             </div>
                         </div>
-
                         <div class="col-md-3"><label>Inicio</label><input type="time" id="asigIni" class="form-control"></div>
                         <div class="col-md-3"><label>Fin</label><input type="time" id="asigFin" class="form-control"></div>
                         <div class="col-md-3">
@@ -255,6 +301,83 @@
         </div>
     </div>
 
+    <!-- MODAL MATRÍCULA MANUAL -->
+    <div class="modal fade" id="modalMatriculaManual" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content rounded-0 border-2 border-black">
+                <div class="modal-header bg-black text-white rounded-0">
+                    <h5 class="modal-title">Matrícula Manual de Alumno</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    
+                    <!-- PASO 1: SELECCIONAR ALUMNO -->
+                    <div id="step-select-student">
+                        <h5 class="fw-bold mb-3 border-bottom pb-2">1. Buscar Alumno</h5>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <!-- INPUT DE BÚSQUEDA SIN BOTÓN -->
+                                <input type="text" id="busqNombreAlu" class="form-control form-control-lg border-black" placeholder="Escriba el nombre del alumno para buscar...">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="busqCarreraAlu" class="form-select form-select-lg"></select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="busqCicloAlu" class="form-select form-select-lg">
+                                    <option value="0">Todos Ciclos</option>
+                                    <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                                    <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                                    <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover border">
+                                <thead class="table-light sticky-top"><tr><th>Nombre</th><th>Carrera</th><th>Ciclo</th><th>Acción</th></tr></thead>
+                                <tbody id="lista-alumnos-manual"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PASO 2: SELECCIONAR CURSOS -->
+                    <div id="step-select-courses" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                            <h5 class="fw-bold mb-0">2. Matricular a: <span id="lblAlumnoNombre" class="text-primary"></span></h5>
+                            <button onclick="volverPaso1()" class="btn btn-outline-secondary btn-sm">Cambiar Alumno</button>
+                        </div>
+
+                        <div class="row">
+                            <!-- LISTA DE CURSOS DISPONIBLES -->
+                            <div class="col-md-7 border-end">
+                                <h6 class="fw-bold">Cursos Disponibles (Ciclo del Alumno)</h6>
+                                <div id="manual-cursos-loading" class="text-center py-2 text-muted">Cargando cursos...</div>
+                                <div id="manual-cursos-container" style="max-height: 400px; overflow-y: auto;">
+                                    <!-- Se llena con JS -->
+                                </div>
+                            </div>
+                            
+                            <!-- RESUMEN DE MATRÍCULA -->
+                            <div class="col-md-5">
+                                <h6 class="fw-bold">Cursos Seleccionados</h6>
+                                <div class="card-custom p-3 bg-light">
+                                    <ul id="manual-matricula-list" class="list-group list-group-flush mb-3 small">
+                                        <li class="list-group-item bg-transparent text-center text-muted">Ningún curso seleccionado</li>
+                                    </ul>
+                                    <div class="d-flex justify-content-between fw-bold border-top pt-2">
+                                        <span>Total Créditos:</span>
+                                        <span id="manual-creditos">0</span>
+                                    </div>
+                                    <button onclick="confirmarMatriculaManualAdmin()" class="btn btn-success w-100 mt-3">CONFIRMAR MATRÍCULA</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL CONFIRMACIÓN -->
     <div class="modal fade" id="modalConfirm" tabindex="-1">
         <div class="modal-dialog">
@@ -267,7 +390,6 @@
                     <i class="fa fa-exclamation-circle fa-4x text-danger mb-3"></i>
                     <p class="fs-5 fw-bold" id="msgConfirm">¿Está seguro?</p>
                     <p class="text-muted small">Esta acción no se puede deshacer.</p>
-                    
                     <div class="mt-4 d-flex justify-content-center gap-2">
                         <button type="button" class="btn btn-secondary rounded-0 px-4" data-bs-dismiss="modal">Cancelar</button>
                         <button type="button" id="btnConfirmYes" class="btn btn-danger rounded-0 px-4">Sí, Eliminar</button>

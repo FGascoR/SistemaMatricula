@@ -8,6 +8,7 @@ const server = http.createServer(async (req, res) => {
     const db = await connectMongo();
     const collection = db.collection('matriculas_guardadas');
 
+    // --- GUARDAR MATRÍCULA ---
     if (req.url === '/api/matricular' && req.method === 'POST') {
         try {
             const body = await getBody(req);
@@ -18,6 +19,8 @@ const server = http.createServer(async (req, res) => {
                 { usuario_id: body.usuario_id }, 
                 { $set: { 
                     alumno: body.alumno_nombre,
+                    carrera_id: body.carrera_id || 0, // NUEVO: Para filtros admin
+                    ciclo: body.ciclo || 0,           // NUEVO: Para filtros admin
                     cursos: body.cursos,
                     total_creditos: body.total_creditos,
                     ultima_actualizacion: new Date()
@@ -32,6 +35,7 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
+    // --- VER MI MATRÍCULA (ALUMNO) ---
     else if (req.url.startsWith('/api/mi-matricula') && req.method === 'GET') {
         try {
             const urlParams = new URLSearchParams(req.url.split('?')[1]);
@@ -51,6 +55,19 @@ const server = http.createServer(async (req, res) => {
             sendResponse(res, 500, { error: 'Error al recuperar datos' });
         }
     }
+
+    // --- NUEVO: LISTAR TODAS (ADMIN) ---
+    else if (req.url === '/api/matriculas-todas' && req.method === 'GET') {
+        try {
+            // Obtenemos todas y ordenamos por fecha de actualización
+            const todas = await collection.find({}).sort({ ultima_actualizacion: -1 }).toArray();
+            sendResponse(res, 200, todas);
+        } catch (e) {
+            console.error(e);
+            sendResponse(res, 500, { error: 'Error al listar matrículas' });
+        }
+    }
+
     else {
         sendResponse(res, 404, { error: 'Ruta no encontrada' });
     }

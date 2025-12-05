@@ -308,10 +308,17 @@ function renderizarTablaMisCursos() {
 }
 
 // 2. Dibujar Horario Visual (VERSIÓN FINAL - CENTRADO ROBUSTO)
+// En public/js/panel.js
+
 function dibujarHorarioEnGrid() {
     const grid = document.getElementById('timetable-grid');
+    const virtualContainer = document.getElementById('virtual-courses-container'); // REFERENCIA NUEVA
+    
+    // 1. Limpiamos ambos contenedores
     grid.innerHTML = ''; 
+    virtualContainer.innerHTML = ''; 
 
+    // --- DIBUJAR ESTRUCTURA DE LA GRILLA (Igual que antes) ---
     const dias = ['Hora', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
     dias.forEach(d => {
         grid.innerHTML += `<div class="day-header">${d}</div>`;
@@ -334,11 +341,30 @@ function dibujarHorarioEnGrid() {
         'lun': 2, 'mar': 3, 'mie': 4, 'jue': 5, 'vie': 6, 'sab': 7 
     };
 
+    // --- ITERAR MATRÍCULA ---
     matricula.forEach(m => {
-        // --- CORRECCIÓN IMPORTANTE ---
-        // Si el curso no tiene hora (es 24/7), NO intentamos dibujarlo en la grilla
-        if (!m.horario.hora_inicio || !m.horario.hora_fin) return;
+        
+        // >>> LÓGICA NUEVA: DETECTAR CURSOS 24/7 O SIN HORARIO <<<
+        // Si no tiene hora inicio/fin O la modalidad es explícitamente 24/7
+        if (!m.horario.hora_inicio || !m.horario.hora_fin || m.horario.modalidad === '24/7') {
+            
+            // Inyectamos la barra en el contenedor superior
+            virtualContainer.innerHTML += `
+                <div class="virtual-course-banner">
+                    <div>
+                        <span class="virtual-badge"><i class="fa-solid fa-laptop"></i> Virtual 24/7</span>
+                        <span class="virtual-course-name">${m.curso.nombre}</span>
+                    </div>
+                    <div>
+                        <span class="me-3"><i class="fa-solid fa-chalkboard-user"></i> ${m.horario.profesor_nombre || 'Docente UTP'}</span>
+                        <span><i class="fa-solid fa-hashtag"></i> Sec. ${m.horario.seccion}</span>
+                    </div>
+                </div>
+            `;
+            return; // Terminamos aquí para este curso, no lo dibujamos en la grilla
+        }
 
+        // >>> LÓGICA EXISTENTE: DIBUJAR EN GRILLA (Solo si tiene horas) <<<
         const [hIni, mIni] = m.horario.hora_inicio.split(':').map(Number);
         const [hFin, mFin] = m.horario.hora_fin.split(':').map(Number);
 
@@ -347,7 +373,6 @@ function dibujarHorarioEnGrid() {
         const duracionMin = finTotalMin - inicioTotalMin;
 
         const gridRowStart = (hIni - horaInicioGrid) + 2; 
-        
         const pxPorMinuto = 1; 
         const marginTop = mIni * pxPorMinuto; 
         const height = duracionMin * pxPorMinuto; 
@@ -356,13 +381,11 @@ function dibujarHorarioEnGrid() {
 
         diasClase.forEach(diaNombre => {
             const gridCol = mapDias[diaNombre];
-            
             if (gridCol) {
                 const bloque = document.createElement('div');
                 bloque.className = 'event-block';
                 
                 if (m.horario.modalidad === 'Virtual') bloque.style.backgroundColor = '#0dcaf0'; 
-                // if (m.horario.modalidad === '24/7') ... (Ya no se dibuja en grid)
                 if (m.horario.modalidad === 'Virtual') bloque.style.color = '#000'; 
 
                 bloque.innerHTML = `
@@ -370,18 +393,14 @@ function dibujarHorarioEnGrid() {
                     <div>${m.horario.hora_inicio.slice(0,5)} - ${m.horario.hora_fin.slice(0,5)}</div>
                     <div class="small" style="opacity:0.8">Sec. ${m.horario.seccion}</div>
                 `;
-
+                // Estilos de posición (Grid layout + Absolute)
                 bloque.style.gridArea = `${gridRowStart} / ${gridCol} / auto / ${gridCol + 1}`;
                 bloque.style.position = 'absolute';
-                
                 bloque.style.width = '94%';      
                 bloque.style.left = '0';         
                 bloque.style.right = '0';        
                 bloque.style.marginLeft = 'auto'; 
                 bloque.style.marginRight = 'auto';
-                
-                bloque.style.transform = 'none'; 
-                
                 bloque.style.marginTop = `${marginTop}px`; 
                 bloque.style.height = `${height}px`; 
                 bloque.style.zIndex = '10';

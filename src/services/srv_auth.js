@@ -46,27 +46,31 @@ const server = http.createServer(async (req, res) => {
         } catch (e) { console.error(e); sendResponse(res, 500, { error: e.message }); }
     } 
 
-    // --- 2. LISTAR USUARIOS (CORREGIDO PARA PROFESORES) ---
+    // --- 2. LISTAR USUARIOS (Con Buscador por Nombre) ---
     else if (url.startsWith('/api/usuarios') && method === 'GET') {
         const params = new URLSearchParams(url.split('?')[1]);
         const rol = params.get('rol'); 
         const carrera = params.get('carrera');
+        const nombre = params.get('nombre'); // NUEVO PARAMETRO
 
         let sql = '';
         let args = [];
 
         if (rol === 'alumno') {
-            sql = `SELECT a.id, a.nombre, a.correo, a.ciclo, c.nombre as carrera 
+            sql = `SELECT a.id, a.nombre, a.correo, a.ciclo, a.carrera_id, c.nombre as carrera 
                    FROM alumnos a 
                    LEFT JOIN carreras c ON a.carrera_id = c.id WHERE 1=1`;
+            
             if (carrera && carrera !== '0') { sql += ' AND a.carrera_id = ?'; args.push(carrera); }
+            if (nombre) { sql += ' AND a.nombre LIKE ?'; args.push(`%${nombre}%`); }
         } 
-        // AQUÍ ESTABA EL DETALLE: AHORA HACEMOS JOIN CON CARRERAS TAMBIÉN PARA PROFESORES
         else if (rol === 'profesor') {
-            sql = `SELECT p.id, p.nombre, p.correo, c.nombre as carrera 
+            sql = `SELECT p.id, p.nombre, p.correo, p.carrera_id, c.nombre as carrera 
                    FROM profesores p 
                    LEFT JOIN carreras c ON p.carrera_id = c.id WHERE 1=1`;
+            
             if (carrera && carrera !== '0') { sql += ' AND p.carrera_id = ?'; args.push(carrera); }
+            // No añadimos buscador por nombre a profes por ahora, pero se podría
         }
 
         const data = await queryMySQL(sql, args);
@@ -99,4 +103,4 @@ const server = http.createServer(async (req, res) => {
     else { sendResponse(res, 404, { error: 'Ruta no encontrada' }); }
 });
 
-server.listen(3001, () => console.log('🔒 Srv Auth (Fix Profesores) corriendo en 3001'));
+server.listen(3001, () => console.log('🔒 Srv Auth (Buscador Nombre) corriendo en 3001'));
