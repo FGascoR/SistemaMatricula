@@ -8,14 +8,12 @@ const server = http.createServer(async (req, res) => {
     const url = req.url; 
     const method = req.method;
 
-    // --- 1. LOGIN ---
     if (url === '/api/login' && method === 'POST') {
         try {
             const { correo, contrasena } = await getBody(req);
             let user = null;
             let table = '';
 
-            // Búsqueda en cascada
             let results = await queryMySQL('SELECT * FROM admins WHERE correo = ?', [correo]);
             if (results.length > 0) { user = results[0]; table = 'admin'; }
             else {
@@ -46,12 +44,11 @@ const server = http.createServer(async (req, res) => {
         } catch (e) { console.error(e); sendResponse(res, 500, { error: e.message }); }
     } 
 
-    // --- 2. LISTAR USUARIOS (Con Buscador por Nombre) ---
     else if (url.startsWith('/api/usuarios') && method === 'GET') {
         const params = new URLSearchParams(url.split('?')[1]);
         const rol = params.get('rol'); 
         const carrera = params.get('carrera');
-        const nombre = params.get('nombre'); // NUEVO PARAMETRO
+        const nombre = params.get('nombre');
 
         let sql = '';
         let args = [];
@@ -70,14 +67,12 @@ const server = http.createServer(async (req, res) => {
                    LEFT JOIN carreras c ON p.carrera_id = c.id WHERE 1=1`;
             
             if (carrera && carrera !== '0') { sql += ' AND p.carrera_id = ?'; args.push(carrera); }
-            // No añadimos buscador por nombre a profes por ahora, pero se podría
         }
 
         const data = await queryMySQL(sql, args);
         sendResponse(res, 200, data);
     }
 
-    // --- 3. CREAR USUARIO ---
     else if (url === '/api/usuarios' && method === 'POST') {
         try {
             const b = await getBody(req); 
@@ -94,7 +89,6 @@ const server = http.createServer(async (req, res) => {
         } catch (e) { console.error(e); sendResponse(res, 500, { error: 'Error (correo duplicado)' }); }
     }
 
-    // --- 4. DATOS MAESTROS ---
     else if (url === '/api/carreras' && method === 'GET') {
         const data = await queryMySQL('SELECT * FROM carreras');
         sendResponse(res, 200, data);
@@ -103,4 +97,4 @@ const server = http.createServer(async (req, res) => {
     else { sendResponse(res, 404, { error: 'Ruta no encontrada' }); }
 });
 
-server.listen(3001, () => console.log('🔒 Srv Auth (Buscador Nombre) corriendo en 3001'));
+server.listen(3001, () => console.log('Srv Login (MySQL) corriendo en http://localhost:3001'));

@@ -4,6 +4,6 @@ const connection = mysql.createConnection({
 });
 connection.connect(e => { 
     if(e) console.error('Error MySQL:', e); 
-    else console.log('🐬 MySQL Conectado'); 
+    else console.log('MySQL Conectado'); 
 });
 module.exports = connection;

@@ -11,11 +11,12 @@
     <nav class="sidebar">
         <div class="sidebar-header"><span>ADMIN</span></div>
         <ul class="sidebar-menu">
+            <li><a onclick="ver('matriculas')" id="link-matriculas"><i class="fa fa-file-signature"></i><span>Matrículas</span></a></li>
             <li><a onclick="ver('alumnos')" id="link-alumnos" class="active"><i class="fa fa-users"></i><span>Alumnos</span></a></li>
             <li><a onclick="ver('profesores')" id="link-profesores"><i class="fa fa-chalkboard-user"></i><span>Profesores</span></a></li>
             <li><a onclick="ver('cursos')" id="link-cursos"><i class="fa fa-book"></i><span>Cursos</span></a></li>
             <li><a onclick="ver('asignacion')" id="link-asignacion"><i class="fa fa-calendar-check"></i><span>Horarios</span></a></li>
-            <li><a onclick="ver('matriculas')" id="link-matriculas"><i class="fa fa-file-signature"></i><span>Matrículas</span></a></li>
+            <li><a onclick="ver('aulas')" id="link-aulas"><i class="fa fa-building"></i><span>Aulas</span></a></li>
             <li><a onclick="ver('solicitudes')" id="link-solicitudes"><i class="fa fa-envelope-open-text"></i><span>Solicitudes</span></a></li>
             <li style="margin-top:50px"><a href="index.html" class="text-danger"><i class="fa fa-power-off"></i><span>Salir</span></a></li>
         </ul>
@@ -34,6 +35,11 @@
                     </div>
                     <div class="col-md-2">
                         <button class="btn btn-black w-100" onclick="cargarAlumnos()">Filtrar</button>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoAlumno">
+                            <i class="fa fa-user-plus"></i> Nuevo Alumno
+                        </button>
                     </div>
                 </div>
             </div>
@@ -81,14 +87,18 @@
                         <label class="fw-bold">Filtrar por Ciclo</label>
                         <select id="filtroCicloCur" class="form-select" onchange="cargarCursosAdmin()">
                             <option value="0">Todos</option>
-                            <option value="1">Ciclo 1</option><option value="2">Ciclo 2</option><option value="3">Ciclo 3</option>
-                            <option value="4">Ciclo 4</option><option value="5">Ciclo 5</option><option value="6">Ciclo 6</option>
-                            <option value="7">Ciclo 7</option><option value="8">Ciclo 8</option><option value="9">Ciclo 9</option>
-                            <option value="10">Ciclo 10</option>
+                            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                            <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <button class="btn btn-black w-100" onclick="cargarCursosAdmin()">Filtrar</button>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoCurso">
+                            <i class="fa fa-book-medical"></i> Nuevo Curso
+                        </button>
                     </div>
                 </div>
             </div>
@@ -102,7 +112,7 @@
         <section id="view-asignacion" class="section-view">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="fw-bold">Gestión de Horarios</h2>
-                <button class="btn btn-black btn-lg" onclick="abrirModalHorario()">
+                <button class="btn btn-success btn-lg" onclick="abrirModalHorario()">
                     <i class="fa fa-plus-circle"></i> Asignar Nuevo Horario
                 </button>
             </div>
@@ -141,34 +151,40 @@
                 </div>
             </div>
         </section>
-
-        <!-- SECCIÓN MATRÍCULAS -->
-        <section id="view-matriculas" class="section-view">
+        <!-- SECCIÓN AULAS -->
+        <section id="view-aulas" class="section-view">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold">Gestión de Matrículas</h2>
-                <button class="btn btn-success btn-lg" onclick="abrirModalMatriculaManual()">
-                    <i class="fa fa-user-plus"></i> Generar Matrícula Manual
+                <h2 class="fw-bold">Gestión de Aulas</h2>
+                <button class="btn btn-success btn-lg" onclick="abrirModalAsignarAula()">
+                    <i class="fa fa-plus-circle"></i> Asignar Aula
                 </button>
             </div>
 
             <div class="card-custom mb-3">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-4">
-                        <label class="fw-bold">Filtrar por Carrera</label>
-                        <select id="filtroCarreraMat" class="form-select" onchange="cargarMatriculasAdmin()"></select>
+                    <div class="col-md-3">
+                        <label class="fw-bold">Torre</label>
+                        <select id="filtroTorreAula" class="form-select" onchange="cargarTablaAulas()">
+                            <option value="0">Todas</option>
+                            <option value="A">Torre A</option>
+                            <option value="B">Torre B</option>
+                            <option value="C">Torre C</option>
+                            <option value="D">Torre D</option>
+                        </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="fw-bold">Filtrar por Ciclo</label>
-                        <select id="filtroCicloMat" class="form-select" onchange="cargarMatriculasAdmin()">
+                        <label class="fw-bold">Piso</label>
+                        <select id="filtroPisoAula" class="form-select" onchange="cargarTablaAulas()">
                             <option value="0">Todos</option>
-                            <option value="1">Ciclo 1</option><option value="2">Ciclo 2</option><option value="3">Ciclo 3</option>
-                            <option value="4">Ciclo 4</option><option value="5">Ciclo 5</option><option value="6">Ciclo 6</option>
-                            <option value="7">Ciclo 7</option><option value="8">Ciclo 8</option><option value="9">Ciclo 9</option>
-                            <option value="10">Ciclo 10</option>
+                            <option value="2">Piso 2</option><option value="3">Piso 3</option>
+                            <option value="4">Piso 4</option><option value="5">Piso 5</option>
+                            <option value="6">Piso 6</option><option value="7">Piso 7</option>
+                            <option value="8">Piso 8</option><option value="9">Piso 9</option>
+                            <option value="10">Piso 10</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-black w-100" onclick="cargarMatriculasAdmin()">Filtrar</button>
+                        <button class="btn btn-black w-100" onclick="cargarTablaAulas()">Filtrar</button>
                     </div>
                 </div>
             </div>
@@ -178,17 +194,165 @@
                     <table class="table table-hover border-black align-middle">
                         <thead class="table-dark">
                             <tr>
-                                <th>Alumno</th>
-                                <th>Carrera</th>
-                                <th>Cursos Matriculados</th>
-                                <th>Total Créditos</th>
-                                <th>Fecha Registro</th>
+                                <th>Torre</th>
+                                <th>Piso</th>
+                                <th>Aula</th>
+                                <th>Sección Asignada</th>
+                                <th>Detalle Horario</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-matriculas-admin">
-                            <tr><td colspan="5" class="text-center">Cargando...</td></tr>
-                        </tbody>
+                        <tbody id="tabla-aulas"></tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <div class="modal fade" id="modalAsignarAula" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content rounded-0 border-2 border-black">
+                    <div class="modal-header bg-black text-white rounded-0">
+                        <h5 class="modal-title">Asignar Aula a Sección</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        
+                        <h6 class="fw-bold border-bottom pb-2">1. Seleccionar Sección y Día</h6>
+                        <div class="mb-4">
+                            <input type="text" id="busqSeccionModal" class="form-control mb-2 border-black" 
+                                placeholder="🔍 Buscar sección (ej. Matemática)..." 
+                                onkeyup="filtrarHorariosModal()">
+                            
+                            <select id="selHorarioAsig" class="form-select mb-2" size="4" onchange="cargarDiasDelHorario()"></select>
+
+                            <div id="divDiaEspecifico" style="display:none;" class="bg-light p-2 border border-black">
+                                <label class="fw-bold small text-danger">¿Para qué día asignarás el aula?</label>
+                                <select id="selDiaAsig" class="form-select border-danger"></select>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold border-bottom pb-2">2. Ubicación</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="fw-bold small">Torre</label>
+                                <select id="selTorreAsig" class="form-select" onchange="actualizarPisosPorTorre()">
+                                    <option value="A">Torre A (Pisos 2-10)</option>
+                                    <option value="B">Torre B (Pisos 2-10)</option>
+                                    <option value="C">Torre C (Pisos 5-10)</option>
+                                    <option value="D">Torre D (Pisos 2-4)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-bold small">Piso</label>
+                                <select id="selPisoAsig" class="form-select" onchange="cargarSelectAulasInventario()"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-bold small">Aula Disponible</label>
+                                <select id="selAulaFinal" class="form-select"></select>
+                            </div>
+                        </div>
+
+                        <button onclick="guardarAsignacionAula()" class="btn btn-success w-100 mt-4">GUARDAR ASIGNACIÓN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- SECCIÓN MATRÍCULAS -->
+        <section id="view-matriculas" class="section-view">
+            <h2 class="fw-bold mb-4">Gestión de Matrículas y Pagos</h2>
+
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <button class="nav-link active fw-bold text-dark" id="tab-fichas" onclick="cambiarTabMatricula('fichas')">
+                        <i class="fa fa-file-signature"></i> Fichas de Matrícula
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-dark" id="tab-pagos" onclick="cambiarTabMatricula('pagos')">
+                        <i class="fa fa-money-bill-wave"></i> Estado de Pagos
+                    </button>
+                </li>
+            </ul>
+
+            <div id="panel-fichas">
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-success" onclick="abrirModalMatriculaManual()">
+                        <i class="fa fa-user-plus"></i> Generar Matrícula Manual
+                    </button>
+                </div>
+
+                <div class="card-custom mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="fw-bold">Filtrar por Carrera</label>
+                            <select id="filtroCarreraMat" class="form-select" onchange="cargarMatriculasAdmin()"></select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fw-bold">Filtrar por Ciclo</label>
+                            <select id="filtroCicloMat" class="form-select" onchange="cargarMatriculasAdmin()">
+                                <option value="0">Todos</option>
+                                <option value="1">Ciclo 1</option><option value="2">Ciclo 2</option><option value="3">Ciclo 3</option>
+                                <option value="4">Ciclo 4</option><option value="5">Ciclo 5</option><option value="6">Ciclo 6</option>
+                                <option value="7">Ciclo 7</option><option value="8">Ciclo 8</option><option value="9">Ciclo 9</option>
+                                <option value="10">Ciclo 10</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-black w-100" onclick="cargarMatriculasAdmin()">Filtrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-custom">
+                    <div class="table-responsive">
+                        <table class="table table-hover border-black align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Alumno</th>
+                                    <th>Carrera</th>
+                                    <th>Cursos Matriculados</th>
+                                    <th>Total Créditos</th>
+                                    <th>Fecha Registro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-matriculas-admin">
+                                <tr><td colspan="5" class="text-center">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-pagos" style="display: none;">
+                <div class="card-custom mb-3 bg-light border-warning">
+                    <div class="d-flex align-items-center">
+                        <i class="fa fa-info-circle fa-2x text-warning me-3"></i>
+                        <div>
+                            <strong>Control de Deudas:</strong>
+                            <span class="text-muted">Aquí puedes ver qué alumnos ya pagaron y están habilitados para inscribirse.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-custom">
+                    <div class="table-responsive">
+                        <table class="table table-hover border-black align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Alumno</th>
+                                    <th>Carrera</th>
+                                    <th>Estado Matrícula</th> 
+                                    <th>Fecha Pago</th>
+                                    <th>Método</th>
+                                    <th>Acción</th> 
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-pagos-admin">
+                                <tr><td colspan="5" class="text-center">Cargando datos financieros...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>
@@ -222,7 +386,6 @@
 
     </main>
 
-    <!-- MODAL NUEVO PROFESOR -->
     <div class="modal fade" id="modalNuevoProfe" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content rounded-0 border-2 border-black">
@@ -241,7 +404,6 @@
         </div>
     </div>
 
-    <!-- MODAL ASIGNACIÓN DE HORARIO -->
     <div class="modal fade" id="modalAsignacion" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content rounded-0 border-2 border-black">
@@ -301,7 +463,6 @@
         </div>
     </div>
 
-    <!-- MODAL MATRÍCULA MANUAL -->
     <div class="modal fade" id="modalMatriculaManual" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content rounded-0 border-2 border-black">
@@ -311,26 +472,30 @@
                 </div>
                 <div class="modal-body p-4">
                     
-                    <!-- PASO 1: SELECCIONAR ALUMNO -->
                     <div id="step-select-student">
                         <h5 class="fw-bold mb-3 border-bottom pb-2">1. Buscar Alumno</h5>
-                        <div class="row g-2 mb-3">
+                        
+                        <div class="row g-2 mb-3 align-items-end">
                             <div class="col-md-6">
-                                <!-- INPUT DE BÚSQUEDA SIN BOTÓN -->
-                                <input type="text" id="busqNombreAlu" class="form-control form-control-lg border-black" placeholder="Escriba el nombre del alumno para buscar...">
+                                <label class="form-label fw-bold small text-muted">Buscar por Nombre:</label>
+                                <input type="text" id="busqNombreAlu" class="form-control border-black" placeholder="Ej: Juan Perez...">
                             </div>
                             <div class="col-md-3">
-                                <select id="busqCarreraAlu" class="form-select form-select-lg"></select>
+                                <label class="form-label fw-bold small text-muted">Filtrar Carrera:</label>
+                                <select id="busqCarreraAlu" class="form-select"></select>
                             </div>
                             <div class="col-md-3">
-                                <select id="busqCicloAlu" class="form-select form-select-lg">
-                                    <option value="0">Todos Ciclos</option>
-                                    <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-                                    <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-                                    <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                                <label class="form-label fw-bold small text-muted">Filtrar Ciclo:</label>
+                                <select id="busqCicloAlu" class="form-select">
+                                    <option value="0">Todos los Ciclos</option>
+                                    <option value="1">Ciclo 1</option><option value="2">Ciclo 2</option><option value="3">Ciclo 3</option>
+                                    <option value="4">Ciclo 4</option><option value="5">Ciclo 5</option><option value="6">Ciclo 6</option>
+                                    <option value="7">Ciclo 7</option><option value="8">Ciclo 8</option><option value="9">Ciclo 9</option>
+                                    <option value="10">Ciclo 10</option>
                                 </select>
                             </div>
                         </div>
+                        
                         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-hover border">
                                 <thead class="table-light sticky-top"><tr><th>Nombre</th><th>Carrera</th><th>Ciclo</th><th>Acción</th></tr></thead>
@@ -339,7 +504,6 @@
                         </div>
                     </div>
 
-                    <!-- PASO 2: SELECCIONAR CURSOS -->
                     <div id="step-select-courses" style="display:none;">
                         <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                             <h5 class="fw-bold mb-0">2. Matricular a: <span id="lblAlumnoNombre" class="text-primary"></span></h5>
@@ -347,16 +511,13 @@
                         </div>
 
                         <div class="row">
-                            <!-- LISTA DE CURSOS DISPONIBLES -->
                             <div class="col-md-7 border-end">
                                 <h6 class="fw-bold">Cursos Disponibles (Ciclo del Alumno)</h6>
                                 <div id="manual-cursos-loading" class="text-center py-2 text-muted">Cargando cursos...</div>
                                 <div id="manual-cursos-container" style="max-height: 400px; overflow-y: auto;">
-                                    <!-- Se llena con JS -->
                                 </div>
                             </div>
                             
-                            <!-- RESUMEN DE MATRÍCULA -->
                             <div class="col-md-5">
                                 <h6 class="fw-bold">Cursos Seleccionados</h6>
                                 <div class="card-custom p-3 bg-light">
@@ -378,7 +539,6 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIRMACIÓN -->
     <div class="modal fade" id="modalConfirm" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content rounded-0 border-2 border-black">
@@ -399,12 +559,68 @@
         </div>
     </div>
 
-    <!-- TOAST DE NOTIFICACIÓN -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body" id="toast-message"></div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalNuevoAlumno" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-0 border-2 border-black">
+                <div class="modal-header bg-black text-white rounded-0">
+                    <h5 class="modal-title">Registrar Alumno</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2"><label>Nombre Completo</label><input id="aluNom" class="form-control"></div>
+                    <div class="mb-2"><label>Correo Institucional</label><input id="aluEmail" class="form-control"></div>
+                    <div class="mb-2"><label>Contraseña</label><input id="aluPass" type="password" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label>Carrera</label>
+                            <select id="aluCarreraSelect" class="form-select"></select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Ciclo</label>
+                            <select id="aluCiclo" class="form-select">
+                                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="crearAlumno()" class="btn btn-success w-100">Guardar Alumno</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalNuevoCurso" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-0 border-2 border-black">
+                <div class="modal-header bg-black text-white rounded-0">
+                    <h5 class="modal-title">Crear Nuevo Curso</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-md-4 mb-2"><label>Código</label><input id="curCod" class="form-control" placeholder="Ej: ING101"></div>
+                        <div class="col-md-8 mb-2"><label>Nombre del Curso</label><input id="curNom" class="form-control"></div>
+                    </div>
+                    
+                    <div class="mb-2"><label>Carrera</label><select id="curCarreraSelect" class="form-select"></select></div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><label>Ciclo</label><input id="curCiclo" type="number" class="form-control" value="1"></div>
+                        <div class="col-md-4"><label>Créditos</label><input id="curCred" type="number" class="form-control" value="3"></div>
+                        <div class="col-md-4"><label>Horas</label><input id="curHoras" type="number" class="form-control" value="4"></div>
+                    </div>
+                    
+                    <button onclick="crearCurso()" class="btn btn-success w-100">Guardar Curso</button>
+                </div>
             </div>
         </div>
     </div>

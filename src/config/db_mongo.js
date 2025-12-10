@@ -7,7 +7,7 @@ async function connectMongo() {
     if (!db) {
         await client.connect();
         db = client.db('matricula_db');
-        console.log('🍃 Mongo Conectado');
+        console.log('Mongo Conectado');
     }
     return db;
 }

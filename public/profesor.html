@@ -6,26 +6,90 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .week-item {
+            border-left: 4px solid #cf2e2e;
+            background: #fff;
+            margin-bottom: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: 0.3s;
+        }
+        .week-item:hover { transform: translateX(5px); }
+        .nav-tabs .nav-link { color: #333; font-weight: 600; }
+        .nav-tabs .nav-link.active { color: #cf2e2e; border-bottom: 3px solid #cf2e2e; }
+    </style>
 </head>
 <body>
     <nav class="sidebar">
         <div class="sidebar-header"><span>DOCENTE</span></div>
         <ul class="sidebar-menu">
-            <li><a class="active"><i class="fa fa-book"></i><span>Mis Clases</span></a></li>
+            <li><a onclick="volverAlInicio()" class="active"><i class="fa fa-book"></i><span>Mis Clases</span></a></li>
             <li style="margin-top:50px"><a href="index.html" class="text-danger"><i class="fa fa-power-off"></i><span>Salir</span></a></li>
         </ul>
     </nav>
 
     <main class="main-content">
-        <section class="section-view active">
-            <h2 class="fw-bold mb-4">👨‍🏫 Mis Cursos Asignados</h2>
-            
+        
+        <section id="view-dashboard" class="section-view active">
+            <h2 class="fw-bold mb-4">Mis Cursos Asignados</h2>
             <div id="lista-clases">
-                <div class="text-center py-5">Cargando...</div>
+                <div class="text-center py-5"><i class="fa fa-spinner fa-spin"></i> Cargando cursos...</div>
             </div>
         </section>
+
+        <section id="view-detalle" class="section-view">
+            <div class="d-flex align-items-center mb-4">
+                <button onclick="volverAlInicio()" class="btn btn-outline-dark me-3 rounded-circle" style="width:40px;height:40px;padding:0;">
+                    <i class="fa fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h2 class="fw-bold mb-0" id="detalle-titulo">Nombre del Curso</h2>
+                    <span class="text-muted" id="detalle-subtitulo">Sección - Horario</span>
+                </div>
+            </div>
+
+            <div class="card-custom p-0 overflow-hidden">
+                <ul class="nav nav-tabs nav-fill bg-light" id="courseTab" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-silabo" type="button">
+                            <i class="fa fa-list-ol"></i> Contenido (Sílabo)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-alumnos" type="button">
+                            <i class="fa fa-users"></i> Alumnos Inscritos
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-4">
+                    
+                    <div class="tab-pane fade show active" id="tab-silabo">
+                        <h5 class="fw-bold mb-3">Plan de Aprendizaje (18 Semanas)</h5>
+                        <div id="container-weeks"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-alumnos">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold m-0">Lista de Estudiantes</h5>
+                            <span class="badge bg-dark" id="badge-total-alumnos">0 Alumnos</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover border">
+                                <thead class="table-light"><tr><th>#</th><th>Apellidos y Nombres</th><th>Ciclo</th><th>Estado</th></tr></thead>
+                                <tbody id="tabla-alumnos-curso"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const PROF_ID = localStorage.getItem('usuario_id');
         if(!PROF_ID) window.location.href = 'index.html';
@@ -42,50 +106,115 @@
             }
             
             data.forEach(c => {
-                // --- LÓGICA DE ETIQUETAS Y COLORES ACTUALIZADA ---
-                let badgeClass = 'bg-primary'; // Default: Presencial (Azul)
-                let icon = 'fa-chalkboard-user';
+                let badgeClass = c.modalidad === 'Virtual' ? 'bg-info text-dark' : 'bg-primary';
+                if(c.modalidad === '24/7') badgeClass = 'bg-success';
 
-                if(c.modalidad === 'Virtual') {
-                    badgeClass = 'bg-info text-dark';
-                    icon = 'fa-laptop';
-                }
-                
-                // NUEVO: Soporte explícito para 24/7
-                if(c.modalidad === '24/7' || c.modalidad === 'Híbrido') {
-                    badgeClass = 'bg-success'; // Verde
-                    icon = 'fa-stopwatch';
-                }
+                let horarioTexto = (c.hora_inicio && c.hora_fin) 
+                    ? `${c.hora_inicio.slice(0,5)} - ${c.hora_fin.slice(0,5)}` : '24/7';
 
-                // --- CORRECCIÓN VISUAL PARA HORARIOS NULL (24/7) ---
-                let horarioTexto = '';
-                if (c.hora_inicio && c.hora_fin) {
-                    horarioTexto = `${c.hora_inicio.slice(0,5)} - ${c.hora_fin.slice(0,5)}`;
-                } else {
-                    horarioTexto = '<span class="">24/7</span>';
-                }
-
-                // --- CORRECCIÓN PARA DÍAS NULL (24/7) ---
-                let diaTexto = c.dia === '24/7' ? '24/7' : c.dia;
+                const cString = encodeURIComponent(JSON.stringify(c));
 
                 container.innerHTML += `
                 <div class="card-custom mb-3 p-3 d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="fw-bold mb-1">${c.curso_nombre}</h5>
                         <div class="text-muted small">
-                            <span class="me-3 fw-bold text-dark"><i class="fa fa-hashtag"></i> Sección: ${c.seccion}</span>
-                            <span class="me-3"><i class="fa fa-calendar"></i> ${diaTexto}</span>
+                            <span class="me-3 fw-bold text-dark"><i class="fa fa-hashtag"></i> Sec. ${c.seccion}</span>
+                            <span class="me-3"><i class="fa fa-calendar"></i> ${c.dia}</span>
                             <span class="me-3"><i class="fa fa-clock"></i> ${horarioTexto}</span>
                         </div>
                     </div>
                     <div class="text-end">
-                        <span class="badge ${badgeClass} p-2" style="font-size: 0.9rem">
-                            <i class="fa ${icon}"></i> ${c.modalidad || 'Presencial'}
-                        </span>
+                        <span class="badge ${badgeClass} mb-2 d-block">${c.modalidad || 'Presencial'}</span>
+                        <button onclick="verCurso('${cString}')" class="btn btn-dark btn-sm rounded-pill px-3">
+                            Ver Curso <i class="fa fa-arrow-right"></i>
+                        </button>
                     </div>
                 </div>`;
             });
         });
+
+        function verCurso(cString) {
+            const c = JSON.parse(decodeURIComponent(cString));
+            
+            document.getElementById('detalle-titulo').innerText = c.curso_nombre;
+            document.getElementById('detalle-subtitulo').innerText = `Sección ${c.seccion} | ${c.dia}`;
+
+            generarSilabo(c.curso_nombre);
+
+            cargarAlumnos(c.id);
+
+            document.getElementById('view-dashboard').classList.remove('active');
+            document.getElementById('view-detalle').classList.add('active');
+        }
+
+        function volverAlInicio() {
+            document.getElementById('view-detalle').classList.remove('active');
+            document.getElementById('view-dashboard').classList.add('active');
+        }
+
+        function generarSilabo(nombreCurso) {
+            const container = document.getElementById('container-weeks');
+            container.innerHTML = '';
+            
+            const topics = ["Contenido Semana 1", "Contenido Semana 2", "Contenido Semana 3", "Contenido Semana 4", 
+                            "Práctica Calificada 1", "Contenido Semana 6", "Contenido Semana 7", "Contenido Semana 8", 
+                            "Contenido Semana 9", "Práctica Calificada 2", "Contenido Semana 11", "Contenido Semana 12",
+                            "Contenido Semana 13", "Contenido Semana 14", "Práctica Calificada 3", "Contenido Semana 16", 
+                            "Contenido Semana 17", "Examen Final"];
+
+            for(let i = 1; i <= 18; i++) {
+                const tema = i <= topics.length ? topics[i-1] + " " + nombreCurso : "Tema Avanzado";
+                let icon = 'fa-book-open';
+                let color = 'text-dark';
+                
+                if(i === 18) { icon = 'fa-file-signature'; color = 'text-danger fw-bold'; } // Exámenes
+                if(i === 5 || i === 10 || i === 15) { icon = 'fa-pencil'; color = 'text-primary'; } // Prácticas
+
+                container.innerHTML += `
+                <div class="week-item d-flex align-items-center">
+                    <div class="bg-light text-center rounded me-3" style="width:50px; height:50px; line-height:50px;">
+                        <span class="fw-bold text-muted">S${i}</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="m-0 ${color}">${tema}</h6>
+                        <small class="text-muted">Unidad de aprendizaje ${Math.ceil(i/4)}</small>
+                    </div>
+                    <div><i class="fa ${icon} text-muted"></i></div>
+                </div>`;
+            }
+        }
+
+        function cargarAlumnos(horarioId) {
+            const tbody = document.getElementById('tabla-alumnos-curso');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3">Cargando lista...</td></tr>';
+            
+            fetch(`http://localhost:3004/api/alumnos-inscritos?id=${horarioId}`)
+            .then(r => r.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                document.getElementById('badge-total-alumnos').innerText = data.length + " Alumnos";
+
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">Aún no hay alumnos inscritos.</td></tr>';
+                    return;
+                }
+
+                data.forEach((a, index) => {
+                    tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold">${index + 1}</td>
+                        <td>${a.nombre}</td>
+                        <td>Ciclo ${a.ciclo}</td>
+                        <td><span class="badge bg-success">Matriculado</span></td>
+                    </tr>`;
+                });
+            })
+            .catch(e => {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar datos.</td></tr>';
+            });
+        }
     </script>
 </body>
 </html>

@@ -73,7 +73,9 @@ body {
     height: 60px;
     display: flex;
     align-items: center;
-    color: #bbb;
+    color: #f0f0f0 !important; 
+    opacity: 1 !important;  
+    
     text-decoration: none;
     transition: 0.3s;
     cursor: pointer;
@@ -112,7 +114,6 @@ body {
     color: #ff4d4d !important;
 }
 
-/* --- CONTENIDO PRINCIPAL --- */
 .main-content {
     margin-left: var(--sidebar-collapsed);
     padding: 30px;
@@ -132,7 +133,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- COMPONENTES --- */
 .card-custom {
     background: var(--white);
     border: 1px solid var(--black);
@@ -156,16 +156,13 @@ body {
     color: var(--black);
 }
 
-/* --- HORARIO GRID (MEJORADO) --- */
 .timetable {
     display: grid;
-    /* Columna hora (60px) + 6 columnas de dias */
     grid-template-columns: 60px repeat(6, 1fr);
-    /* Header (40px) + 14 filas de horas (60px c/u) */
     grid-template-rows: 40px repeat(14, 60px); 
     border: 2px solid var(--black);
     background: var(--white);
-    position: relative; /* Para contener elementos absolutos si fuera necesario */
+    position: relative; 
 }
 
 .day-header {
@@ -180,9 +177,8 @@ body {
     border: 1px solid #333;
 }
 
-/* Las celdas de hora y vacías deben tener altura exacta */
 .time-header, .time-slot {
-    height: 60px; /* 1 hora = 60px */
+    height: 60px; 
     border: 1px solid #e0e0e0;
     display: flex;
     align-items: center;
@@ -194,11 +190,10 @@ body {
 
 .course-cell {
     border: 1px solid #eee;
-    height: 60px; /* Importante para mantener la rejilla */
+    height: 60px; 
     background: white;
 }
 
-/* El bloque del curso flotante */
 .event-block {
     background: var(--black);
     color: var(--white);
@@ -215,19 +210,15 @@ body {
     justify-content: center;
     z-index: 10;
     line-height: 1.2;
-    
-    /* --- CAMBIOS CRUCIALES --- */
-    position: absolute;  /* <--- ESTO ES LO QUE FALTA */
-    align-self: start;   /* Asegura que el margin-top se mida desde arriba */
+    position: absolute; 
+    align-self: start;   
 }
-/* En public/css/style.css */
 
-/* --- ESTILOS PARA CURSOS 24/7 (BARRAS SUPERIORES) --- */
 .virtual-course-banner {
-    background: #8e244d; /* Color vino similar a UTP */
+    background: #8e244d; 
     color: white;
     padding: 10px 15px;
-    margin-bottom: 8px; /* Espacio entre barras */
+    margin-bottom: 8px; 
     border-radius: 6px;
     display: flex;
     justify-content: space-between;

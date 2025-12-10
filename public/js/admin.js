@@ -3,11 +3,15 @@ const API_CUR = 'http://localhost:3002/api';
 const API_HOR = 'http://localhost:3003/api';
 const API_INS = 'http://localhost:3004/api'; 
 const API_SOL = 'http://localhost:3006/api/solicitudes'; 
+const API_AULA = 'http://localhost:3007/api'; 
 
 const modalProf = new bootstrap.Modal(document.getElementById('modalNuevoProfe'));
 const modalAsig = new bootstrap.Modal(document.getElementById('modalAsignacion'));
 const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirm')); 
 const modalManual = new bootstrap.Modal(document.getElementById('modalMatriculaManual'));
+const modalAlu = new bootstrap.Modal(document.getElementById('modalNuevoAlumno'));
+const modalCur = new bootstrap.Modal(document.getElementById('modalNuevoCurso'));
+const modalAula = new bootstrap.Modal(document.getElementById('modalAsignarAula'));
 
 const toastEl = document.getElementById('liveToast');
 const toast = new bootstrap.Toast(toastEl);
@@ -15,11 +19,14 @@ const toast = new bootstrap.Toast(toastEl);
 let idEliminarTemp = null; 
 let solicitudActualId = null; 
 
-// Variables para Matrícula Manual
 let alumnoSeleccionado = null; 
 let cursosManualTemp = []; 
 
-// --- TOAST FUNCTION ---
+let horariosParaAsignarCache = [];
+let tipoEliminacion = '';
+
+let pagoAlumnoTemp = null;
+
 function mostrarToast(msg, bgClass = 'bg-primary') {
     document.getElementById('toast-message').innerText = msg;
     toastEl.className = `toast align-items-center text-white border-0 ${bgClass}`;
@@ -30,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await cargarCarreras(); 
     ver('alumnos'); 
 
-    // Búsqueda en tiempo real
     const inputBusq = document.getElementById('busqNombreAlu');
     if(inputBusq) {
         inputBusq.addEventListener('input', () => {
@@ -38,7 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Filtros reactivos
     const filtroCarrera = document.getElementById('busqCarreraAlu');
     if(filtroCarrera) filtroCarrera.addEventListener('change', cargarAlumnosManual);
     
@@ -59,6 +64,7 @@ function ver(id) {
     if(id === 'matriculas') cargarMatriculasAdmin();
 }
 
+
 async function cargarCarreras() {
     const res = await fetch(API_AUTH + '/carreras'); const data = await res.json();
     const fill = (id) => { 
@@ -70,31 +76,42 @@ async function cargarCarreras() {
     fill('filtroCarreraAlu'); fill('filtroCarreraProf'); fill('filtroCarreraCur'); 
     fill('asigCarrera'); fill('profCarreraSelect'); fill('filtroCarreraHor');
     fill('filtroCarreraMat'); fill('busqCarreraAlu');
+    
+    fill('aluCarreraSelect'); 
+    fill('curCarreraSelect');
 }
 
-// --- ALUMNOS Y PROFESORES ---
 async function cargarAlumnos() {
-    const cid = document.getElementById('filtroCarreraAlu').value; const tb = document.getElementById('tabla-alumnos'); tb.innerHTML='';
-    if(cid==0) { tb.innerHTML='<tr><td colspan="4" class="text-center">Seleccione carrera</td></tr>'; return; }
-    const res = await fetch(`${API_AUTH}/usuarios?rol=alumno&carrera=${cid}`); const data = await res.json();
-    if(data.length===0) tb.innerHTML='<tr><td colspan="4" class="text-center">Sin alumnos</td></tr>';
+    const cid = document.getElementById('filtroCarreraAlu').value; 
+    const tb = document.getElementById('tabla-alumnos'); tb.innerHTML='';
+        if(cid==0) {
+             tb.innerHTML='<tr><td colspan="4" class="text-center">Seleccione carrera</td></tr>'; 
+             return; 
+        }
+         const res = await fetch(`${API_AUTH}/usuarios?rol=alumno&carrera=${cid}`); const data = await res.json();
+        if(data.length===0) 
+            tb.innerHTML='<tr><td colspan="4" class="text-center">Sin alumnos</td></tr>';
     data.forEach(u => tb.innerHTML+=`<tr><td>${u.nombre}</td><td>${u.correo}</td><td>${u.ciclo}</td><td>${u.carrera||'-'}</td></tr>`);
 }
 async function cargarProfesores() {
-    const cid = document.getElementById('filtroCarreraProf').value; const tb = document.getElementById('tabla-profesores'); tb.innerHTML='';
-    if(cid==0) { tb.innerHTML='<tr><td colspan="3" class="text-center">Seleccione carrera</td></tr>'; return; }
+    const cid = document.getElementById('filtroCarreraProf').value; 
+    const tb = document.getElementById('tabla-profesores'); tb.innerHTML='';
+        if(cid==0) {
+             tb.innerHTML='<tr><td colspan="3" class="text-center">Seleccione carrera</td></tr>';
+              return; 
+        }
     const res = await fetch(`${API_AUTH}/usuarios?rol=profesor&carrera=${cid}`); const data = await res.json();
-    if(data.length===0) tb.innerHTML='<tr><td colspan="3" class="text-center">Sin profesores</td></tr>';
+        if(data.length===0) 
+            tb.innerHTML='<tr><td colspan="3" class="text-center">Sin profesores</td></tr>';
     data.forEach(u => tb.innerHTML+=`<tr><td>${u.nombre}</td><td>${u.correo}</td><td>${u.carrera||'General'}</td></tr>`);
 }
 async function crearProfesor() {
     const b = { nombre: document.getElementById('profNom').value, correo: document.getElementById('profEmail').value, contrasena: document.getElementById('profPass').value, carrera_id: document.getElementById('profCarreraSelect').value, rol: 'profesor' };
     const res = await fetch(API_AUTH+'/usuarios', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b)});
-    if(res.ok) { mostrarToast('✅ Profesor creado', 'bg-success'); modalProf.hide(); cargarProfesores(); }
-    else { mostrarToast('⛔ Error al crear', 'bg-danger'); }
+    if(res.ok) { mostrarToast('Profesor creado', 'bg-success'); modalProf.hide(); cargarProfesores(); }
+    else { mostrarToast('Error al crear', 'bg-danger'); }
 }
 
-// --- CURSOS ---
 async function cargarCursosAdmin() {
     const cid = document.getElementById('filtroCarreraCur').value; const ciclo = document.getElementById('filtroCicloCur').value; const tb = document.getElementById('tabla-cursos'); tb.innerHTML='';
     if(cid==0) { tb.innerHTML='<tr><td colspan="4" class="text-center">Seleccione carrera</td></tr>'; return; }
@@ -103,7 +120,6 @@ async function cargarCursosAdmin() {
     data.forEach(c => tb.innerHTML+=`<tr><td>${c.codigo}</td><td>${c.nombre}</td><td>${c.ciclo}</td><td>${c.creditos}</td></tr>`);
 }
 
-// --- ASIGNACIÓN DE HORARIOS ---
 function abrirModalHorario() {
     document.getElementById('idHorarioEditar').value = ''; 
     document.getElementById('modalTitleHorario').innerText = "Asignar Nuevo Horario";
@@ -146,27 +162,24 @@ async function editarHorario(hString) {
     const dias = h.dia ? h.dia.split(',').map(d=>d.trim()) : [];
     document.querySelectorAll('.chk-dia').forEach(cb => cb.checked = dias.includes(cb.value));
 
-    mostrarToast("⚠️ Verifica la carrera para cargar dependencias.", "bg-info");
+    mostrarToast("Verifica la carrera para cargar dependencias.", "bg-info");
     solicitudActualId = null; 
     modalAsig.show();
 }
 
-// --- MATRÍCULAS (LISTADO CORREGIDO CON CRUCE DE DATOS) ---
 async function cargarMatriculasAdmin() {
     const tb = document.getElementById('tabla-matriculas-admin');
     tb.innerHTML = '<tr><td colspan="5" class="text-center">Cargando datos completos...</td></tr>';
     
     try {
-        // 1. CARGAMOS MATRÍCULAS (Mongo) Y ALUMNOS (MySQL) EN PARALELO
         const [resMat, resAlu] = await Promise.all([
             fetch(`${API_INS}/matriculas-todas`),
-            fetch(`${API_AUTH}/usuarios?rol=alumno`) // Traemos todos para cruzar datos
+            fetch(`${API_AUTH}/usuarios?rol=alumno`)
         ]);
         
         const matriculas = await resMat.json();
         const alumnos = await resAlu.json();
 
-        // 2. MAPEAR ALUMNOS POR ID PARA ACCESO RÁPIDO
         const mapAlumnos = {};
         alumnos.forEach(a => mapAlumnos[a.id] = a);
         
@@ -176,19 +189,15 @@ async function cargarMatriculasAdmin() {
         tb.innerHTML = '';
         
         const filtrados = matriculas.filter(m => {
-            // EXTRAEMOS DATOS DEL ALUMNO SI EXISTE EN MYSQL
             const datosAlumno = mapAlumnos[m.usuario_id] || {};
             
-            // Usamos el dato de MySQL (más fiable) o el de Mongo como fallback
             const idCarreraReal = datosAlumno.carrera_id || m.carrera_id || 0;
             const nombreCarreraReal = datosAlumno.carrera || 'Sin Asignar';
             const cicloReal = datosAlumno.ciclo || m.ciclo || 0;
 
-            // Filtros
             let pasaCarrera = (fCarrera === '0') || (idCarreraReal == fCarrera);
             let pasaCiclo = (fCiclo === '0') || (cicloReal == fCiclo);
             
-            // GUARDAMOS DATOS CRUZADOS EN EL OBJETO PARA PINTARLOS LUEGO
             m._carreraNombre = nombreCarreraReal;
             m._cicloReal = cicloReal;
 
@@ -221,7 +230,6 @@ async function cargarMatriculasAdmin() {
     }
 }
 
-// --- MATRÍCULA MANUAL (WIZARD) ---
 function abrirModalMatriculaManual() {
     alumnoSeleccionado = null;
     cursosManualTemp = [];
@@ -296,9 +304,14 @@ async function seleccionarAlumnoManual(uStr) {
         const dataMat = await resMat.json();
         
         if (dataMat.existe) {
-            mostrarToast(`⚠️ ADVERTENCIA: ${alumnoSeleccionado.nombre} ya tiene una matrícula registrada.`, "bg-warning");
+            mostrarToast(`El alumno/a ${alumnoSeleccionado.nombre} ya tiene una matrícula registrada.`, "bg-danger");
+            return; 
         }
-    } catch(e) { console.error("Error verificando matricula", e); }
+    } catch(e) { 
+        console.error("Error verificando matricula", e); 
+        mostrarToast("Error de conexión al verificar historial", "bg-danger");
+        return;
+    }
 
     document.getElementById('lblAlumnoNombre').innerText = alumnoSeleccionado.nombre;
     document.getElementById('step-select-student').style.display = 'none';
@@ -366,7 +379,7 @@ function agregarCursoManual(hStr) {
     const item = JSON.parse(decodeURIComponent(hStr));
     
     if(cursosManualTemp.find(x => x.curso.id === item.curso.id)) {
-        mostrarToast("⚠️ El alumno ya tiene este curso.", "bg-warning");
+        mostrarToast("El alumno ya tiene este curso.", "bg-warning");
         return;
     }
     
@@ -383,7 +396,7 @@ function agregarCursoManual(hStr) {
                 const mIni = parseInt(m.horario.hora_inicio.replace(':',''));
                 const mFin = parseInt(m.horario.hora_fin.replace(':',''));
                 if(nIni < mFin && nFin > mIni) {
-                    mostrarToast("⛔ Cruce de horarios detectado.", "bg-danger");
+                    mostrarToast("Cruce de horarios detectado.", "bg-danger");
                     return;
                 }
             }
@@ -450,7 +463,7 @@ async function confirmarMatriculaManualAdmin() {
             });
         }
 
-        mostrarToast("✅ Matrícula generada exitosamente", "bg-success");
+        mostrarToast("Matrícula generada exitosamente", "bg-success");
         modalManual.hide();
         cargarMatriculasAdmin();
 
@@ -460,8 +473,6 @@ async function confirmarMatriculaManualAdmin() {
     }
 }
 
-// ... existing code ...
-// (Mantener funciones de solicitudes, eliminar horario, etc)
 
 async function cargarSolicitudes() {
     const tb = document.getElementById('tabla-solicitudes');
@@ -515,7 +526,7 @@ async function aceptarSolicitud(sData) {
     } else {
         selCarrera.value = 0;
         selCarrera.disabled = false; 
-        mostrarToast("⚠️ Carrera no detectada. Seleccione manualmente.", "bg-warning");
+        mostrarToast("Carrera no detectada. Seleccione manualmente.", "bg-warning");
     }
 
     await cargarDatosAsignacion();
@@ -543,7 +554,15 @@ async function aceptarSolicitud(sData) {
 
 function eliminarHorario(id) {
     idEliminarTemp = id;
+    tipoEliminacion = 'horario'; 
     document.getElementById('msgConfirm').innerText = "¿Seguro que desea eliminar este horario?";
+    modalConfirm.show();
+}
+
+function eliminarAsignacionAula(id) {
+    idEliminarTemp = id;
+    tipoEliminacion = 'aula'; 
+    document.getElementById('msgConfirm').innerText = "¿Liberar esta aula? La sección quedará sin salón asignado.";
     modalConfirm.show();
 }
 
@@ -551,18 +570,66 @@ document.getElementById('btnConfirmYes').addEventListener('click', async () => {
     modalConfirm.hide();
     if(!idEliminarTemp) return;
 
-    const res = await fetch(API_HOR+'/eliminar-horario', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id: idEliminarTemp})
-    });
+    if (tipoEliminacion === 'horario') {
+        const res = await fetch(API_HOR+'/eliminar-horario', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id: idEliminarTemp})
+        });
 
-    if(res.ok) { 
-        mostrarToast("🗑️ Eliminado", "bg-warning"); 
-        cargarTablaHorarios(); 
-    } else { 
-        mostrarToast("Error al eliminar", "bg-danger"); 
+        if(res.ok) { 
+            mostrarToast("Horario eliminado", "bg-warning"); 
+            cargarTablaHorarios(); 
+        } else { 
+            mostrarToast("Error al eliminar", "bg-danger"); 
+        }
     }
+
+    else if (tipoEliminacion === 'aula') {
+        try {
+            await fetch(`${API_AULA}/eliminar-asignacion`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({id: idEliminarTemp})
+            });
+            mostrarToast('Aula liberada exitosamente', 'bg-warning');
+            cargarTablaAulas(); 
+        } catch (e) {
+            console.error(e); 
+            mostrarToast("Error al liberar aula", "bg-danger");
+        }
+    }
+    else if (tipoEliminacion === 'pago') {
+        try {
+            const res = await fetch('http://localhost:3008/api/pagar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    alumno_id: idEliminarTemp,
+                    alumno_nombre: pagoAlumnoTemp.nombre,
+                    concepto: 'Matrícula 2025-I',
+                    monto: 300.00,
+                    metodo: 'Presencial'
+                })
+            });
+
+            if (res.ok) {
+                mostrarToast("Pago registrado exitosamente", "bg-success");
+                cargarEstadoPagosAlumnos();
+            } else {
+                mostrarToast("Error al registrar pago", "bg-danger");
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast("Error de conexión", "bg-danger");
+        }
+        
+        const btn = document.getElementById('btnConfirmYes');
+        btn.className = 'btn btn-danger rounded-0 px-4';
+        btn.innerText = 'Sí, Eliminar';
+    }
+
     idEliminarTemp = null; 
+    tipoEliminacion = '';
 });
+
 
 async function cargarDatosAsignacion() {
     const cid = document.getElementById('asigCarrera').value;
@@ -622,9 +689,9 @@ async function guardarHorario() {
                 body: JSON.stringify({ id: solicitudActualId })
             });
             cargarSolicitudes(); 
-            mostrarToast("✅ Solicitud Atendida y Horario Creado", "bg-success");
+            mostrarToast("Solicitud Atendida y Horario Creado", "bg-success");
         } else {
-            mostrarToast(idEdit ? "✅ Horario editado" : "✅ Horario creado", "bg-success");
+            mostrarToast(idEdit ? "Horario editado" : "Horario creado", "bg-success");
         }
 
         modalAsig.hide();
@@ -636,7 +703,7 @@ async function guardarHorario() {
 
     } else {
         const err = await res.json();
-        mostrarToast("⛔ " + err.error, "bg-danger");
+        mostrarToast("" + err.error, "bg-danger");
     }
 }
 
@@ -667,4 +734,363 @@ async function cargarTablaHorarios() {
             </td>
         </tr>`;
     });
+}
+
+async function crearAlumno() {
+    const b = {
+        nombre: document.getElementById('aluNom').value,
+        correo: document.getElementById('aluEmail').value,
+        contrasena: document.getElementById('aluPass').value,
+        carrera_id: document.getElementById('aluCarreraSelect').value,
+        ciclo: document.getElementById('aluCiclo').value,
+        rol: 'alumno' 
+    };
+
+    if(!b.nombre || !b.correo || !b.contrasena || b.carrera_id == 0) {
+        return mostrarToast("Complete todos los campos", "bg-warning");
+    }
+
+    try {
+        const res = await fetch(API_AUTH+'/usuarios', {
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify(b)
+        });
+        
+        if(res.ok) { 
+            mostrarToast('Alumno registrado', 'bg-success'); 
+            modalAlu.hide(); 
+            document.getElementById('aluNom').value = '';
+            document.getElementById('aluEmail').value = '';
+            cargarAlumnos(); 
+        } else { 
+            mostrarToast('Error: Correo posiblemente duplicado', 'bg-danger'); 
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function crearCurso() {
+    const b = {
+        codigo: document.getElementById('curCod').value,
+        nombre: document.getElementById('curNom').value,
+        carrera_id: document.getElementById('curCarreraSelect').value,
+        ciclo: document.getElementById('curCiclo').value,
+        creditos: document.getElementById('curCred').value,
+        horas: document.getElementById('curHoras').value
+    };
+
+    if(!b.codigo || !b.nombre || b.carrera_id == 0) {
+        return mostrarToast("Complete código, nombre y carrera", "bg-warning");
+    }
+
+    try {
+        const res = await fetch(API_CUR+'/cursos', {
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify(b)
+        });
+
+        if(res.ok) {
+            mostrarToast('Curso creado exitosamente', 'bg-success');
+            modalCur.hide();
+            document.getElementById('curCod').value = '';
+            document.getElementById('curNom').value = '';
+            cargarCursosAdmin(); 
+        } else {
+            const err = await res.json();
+            mostrarToast('' + (err.error || 'Error al crear curso'), 'bg-danger');
+        }
+    } catch(e) { console.error(e); }
+}
+async function cargarTablaAulas() {
+    const torre = document.getElementById('filtroTorreAula').value;
+    const piso = document.getElementById('filtroPisoAula').value;
+    const tb = document.getElementById('tabla-aulas');
+    
+    tb.innerHTML = '<tr><td colspan="7" class="text-center">Cargando...</td></tr>';
+
+    try {
+        const res = await fetch(`${API_AULA}/aulas?torre=${torre}&piso=${piso}`);
+        const data = await res.json();
+
+        tb.innerHTML = '';
+        if (data.length === 0) {
+            tb.innerHTML = '<tr><td colspan="7" class="text-center">No hay asignaciones registradas con estos filtros.</td></tr>';
+            return;
+        }
+
+        data.forEach(a => {
+            tb.innerHTML += `
+            <tr>
+                <td class="fw-bold text-danger">${a.torre}</td>
+                <td>${a.piso}</td>
+                <td class="fw-bold">${a.aula}</td>
+                <td>
+                    <span class="badge bg-dark">${a.seccion}</span> 
+                    <small class="d-block text-muted">${a.curso_nombre || ''}</small>
+                </td>
+                <td>
+                    <small><i class="fa fa-calendar"></i> ${a.dia}</small><br>
+                    <small><i class="fa fa-clock"></i> ${a.hora_inicio} - ${a.hora_fin}</small>
+                </td>
+                <td><span class="badge bg-success">Asignado</span></td>
+                <td>
+                    <button onclick="eliminarAsignacionAula(${a.id})" class="btn btn-sm btn-danger" title="Deshabilitar/Liberar">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+        });
+    } catch (e) { console.error(e); }
+}
+
+async function abrirModalAsignarAula() {
+    actualizarPisosPorTorre();
+
+    const selH = document.getElementById('selHorarioAsig');
+    selH.innerHTML = '<option disabled>Cargando datos...</option>';
+        const res = await fetch(`${API_HOR}/horarios-todos`); 
+    const horarios = await res.json();
+    
+    horariosParaAsignarCache = horarios.filter(h => h.modalidad !== 'Virtual' && h.modalidad !== '24/7');
+    
+    filtrarHorariosModal();
+
+    modalAula.show();
+}
+
+async function cargarSelectAulasInventario() {
+    const torre = document.getElementById('selTorreAsig').value;
+    const piso = document.getElementById('selPisoAsig').value;
+    const selA = document.getElementById('selAulaFinal');
+    
+    const res = await fetch(`${API_AULA}/aulas?modo=inventario&torre=${torre}&piso=${piso}`);
+    const aulas = await res.json();
+    
+    selA.innerHTML = '';
+    if(aulas.length === 0) {
+        selA.innerHTML = '<option>Piso no existe en Torre</option>';
+        return;
+    }
+    
+    aulas.forEach(a => {
+        selA.innerHTML += `<option value="${a.aula}">${a.aula}</option>`;
+    });
+}
+
+async function guardarAsignacionAula() {
+    const selH = document.getElementById('selHorarioAsig');
+    const horarioId = selH.value;
+    const seccionTxt = selH.options[selH.selectedIndex].getAttribute('data-seccion');
+    
+    const b = {
+        horario_id: horarioId,
+        seccion: seccionTxt,
+        torre: document.getElementById('selTorreAsig').value,
+        piso: document.getElementById('selPisoAsig').value,
+        aula: document.getElementById('selAulaFinal').value
+    };
+
+    const res = await fetch(`${API_AULA}/asignar-aula`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(b)
+    });
+
+    if(res.ok) {
+        mostrarToast('Aula asignada correctamente', 'bg-success');
+        modalAula.hide();
+        cargarTablaAulas();
+    } else {
+        const err = await res.json();
+        mostrarToast('' + err.error, 'bg-danger');
+    }
+}
+
+async function guardarAsignacionAula() {
+    const selH = document.getElementById('selHorarioAsig');
+    const selDia = document.getElementById('selDiaAsig'); 
+    
+    if(!selH.value || !selDia.value) {
+        return mostrarToast("Seleccione horario y día específico", "bg-warning");
+    }
+
+    const horarioId = selH.value;
+    const seccionTxt = selH.options[selH.selectedIndex].getAttribute('data-seccion');
+    const diaElegido = selDia.value; 
+    const b = {
+        horario_id: horarioId,
+        seccion: seccionTxt,
+        dia_especifico: diaElegido, 
+        torre: document.getElementById('selTorreAsig').value,
+        piso: document.getElementById('selPisoAsig').value,
+        aula: document.getElementById('selAulaFinal').value
+    };
+
+    const res = await fetch(`${API_AULA}/asignar-aula`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(b)
+    });
+
+    if(res.ok) {
+        mostrarToast(`Aula asignada para el ${diaElegido}`, 'bg-success');
+        modalAula.hide();
+        cargarTablaAulas();
+        document.getElementById('divDiaEspecifico').style.display = 'none';
+    } else {
+        const err = await res.json();
+        mostrarToast('' + err.error, 'bg-danger');
+    }
+}
+
+
+function filtrarHorariosModal() {
+    const texto = document.getElementById('busqSeccionModal').value.toLowerCase().trim();
+    const sel = document.getElementById('selHorarioAsig');
+    sel.innerHTML = '';
+    
+    const filtrados = horariosParaAsignarCache.filter(h => 
+        h.curso_nombre.toLowerCase().includes(texto) || 
+        h.seccion.toLowerCase().includes(texto)
+    );
+
+    if (filtrados.length === 0) {
+        sel.innerHTML = '<option disabled>❌ No se encontraron coincidencias</option>';
+        return;
+    }
+
+    filtrados.forEach(h => {
+        sel.innerHTML += `<option value="${h.id}" data-seccion="${h.seccion}" data-dias="${h.dia}">
+            ${h.curso_nombre} - Sec. ${h.seccion} (${h.dia} ${h.hora_inicio}-${h.hora_fin})
+        </option>`;
+    });
+}
+
+function cargarDiasDelHorario() {
+    const selH = document.getElementById('selHorarioAsig');
+    const divDia = document.getElementById('divDiaEspecifico');
+    const selDia = document.getElementById('selDiaAsig');
+    
+    if (selH.selectedIndex === -1) return;
+
+    const diasString = selH.options[selH.selectedIndex].getAttribute('data-dias');
+    const dias = diasString.split(',').map(d => d.trim()); 
+
+    selDia.innerHTML = '';
+    
+    dias.forEach(d => {
+        selDia.innerHTML += `<option value="${d}">${d}</option>`;
+    });
+
+    if (dias.length > 1) {
+        selDia.innerHTML += `<option value="TODOS" class="fw-bold">Asignar Ambos</option>`;
+    }
+
+    divDia.style.display = 'block';
+}
+
+function actualizarPisosPorTorre() {
+    const torre = document.getElementById('selTorreAsig').value;
+    const selPiso = document.getElementById('selPisoAsig');
+    selPiso.innerHTML = '';
+
+    let min = 2, max = 10;
+    
+    if (torre === 'C') min = 5;      
+    else if (torre === 'D') max = 4; 
+
+    for(let i = min; i <= max; i++) {
+        selPiso.innerHTML += `<option value="${i}">${i}</option>`;
+    }
+    
+    cargarSelectAulasInventario();
+}
+
+function cambiarTabMatricula(tab) {
+    document.getElementById('tab-fichas').className = 'nav-link text-dark';
+    document.getElementById('tab-pagos').className = 'nav-link text-dark';
+    document.getElementById('panel-fichas').style.display = 'none';
+    document.getElementById('panel-pagos').style.display = 'none';
+
+    document.getElementById('tab-' + tab).className = 'nav-link active fw-bold text-dark border-bottom border-3 border-primary';
+    document.getElementById('panel-' + tab).style.display = 'block';
+
+    if (tab === 'fichas') cargarMatriculasAdmin();
+    if (tab === 'pagos') cargarEstadoPagosAlumnos();
+}
+
+async function cargarEstadoPagosAlumnos() {
+    const tb = document.getElementById('tabla-pagos-admin');
+    tb.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm"></div> Cruzando bases de datos...</td></tr>';
+
+    try {
+        const [resAlumnos, resPagos] = await Promise.all([
+            fetch(`${API_AUTH}/usuarios?rol=alumno`),
+            fetch(`http://localhost:3008/api/pagos-todos`)
+        ]);
+
+        const alumnos = await resAlumnos.json();
+        const historialPagos = await resPagos.json();
+
+        tb.innerHTML = '';
+
+        if (alumnos.length === 0) {
+            tb.innerHTML = '<tr><td colspan="6" class="text-center">No hay alumnos registrados.</td></tr>';
+            return;
+        }
+
+        alumnos.forEach(alum => {
+            const pagoMatricula = historialPagos.find(p => 
+                p.alumno_id === alum.id && 
+                p.concepto === 'Matrícula 2025-I'
+            );
+
+            let estadoHTML = '';
+            let fechaHTML = '-';
+            let metodoHTML = '-';
+            let botonHTML = '';
+
+            if (pagoMatricula) {
+                estadoHTML = '<span class="badge bg-success"><i class="fa fa-check-circle"></i> PAGADO</span>';
+                fechaHTML = new Date(pagoMatricula.fecha).toLocaleString();
+                metodoHTML = pagoMatricula.metodo || 'Tarjeta';
+                botonHTML = '<span class="text-muted small"><i class="fa fa-lock"></i> Procesado</span>';
+            } else {
+                estadoHTML = '<span class="badge bg-danger"><i class="fa fa-times-circle"></i> PENDIENTE</span>';
+                botonHTML = `
+                <button onclick="registrarPagoAdmin(${alum.id}, '${alum.nombre}')" class="btn btn-sm btn-outline-success fw-bold">
+                    <i class="fa fa-hand-holding-dollar"></i> Registrar Pago
+                </button>`;
+            }
+
+            tb.innerHTML += `
+            <tr>
+                <td class="fw-bold">${alum.nombre}</td>
+                <td>${alum.carrera || 'Sin carrera'}</td>
+                <td>${estadoHTML}</td>
+                <td>${fechaHTML}</td>
+                <td>${metodoHTML}</td>
+                <td>${botonHTML}</td>
+            </tr>`;
+        });
+
+    } catch (e) {
+        console.error(e);
+        tb.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error de conexión con srv_pagos (3008).</td></tr>';
+    }
+}
+
+function registrarPagoAdmin(id, nombre) {
+    idEliminarTemp = id;          
+    tipoEliminacion = 'pago';     
+    pagoAlumnoTemp = { nombre: nombre }; 
+
+    const btn = document.getElementById('btnConfirmYes');
+    const msg = document.getElementById('msgConfirm');
+
+    msg.innerText = `¿Confirmar pago de S/ 300.00 para ${nombre}?`;
+    
+    btn.className = 'btn btn-success rounded-0 px-4';
+    btn.innerText = 'Sí, Registrar Pago';
+
+    modalConfirm.show();
 }

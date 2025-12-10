@@ -52,6 +52,71 @@
         </div>
     </div>
 
+        <div class="modal fade" id="modalDeudaMatricula" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-0 border-0 shadow-lg">
+                    <div class="modal-header bg-warning border-0">
+                        <h5 class="modal-title fw-bold text-dark"><i class="fa fa-exclamation-triangle"></i> Pendiente de Pago</h5>
+                    </div>
+                    <div class="modal-body text-center p-4">
+                        <p class="fs-5">Hola <span id="lblNombreDeudor" class="fw-bold"></span>,</p>
+                        <p>Para completar tu proceso de matrícula, debes realizar el pago por derecho de inscripción.</p>
+                        <div class="alert alert-light border border-warning mt-3">
+                            <strong>Concepto:</strong> Matrícula 2025-I<br>
+                            <strong>Monto:</strong> S/ 300.00
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 justify-content-center pb-4">
+                        <button onclick="irAPanelDirecto()" class="btn btn-outline-secondary rounded-0">Continuar sin pagar</button>
+                        <button onclick="irAPasarelaPago()" class="btn btn-dark rounded-0 px-4">Ir a Pagar <i class="fa fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="payment-gateway" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-white" style="z-index: 2000;">
+            <div class="container h-100 d-flex flex-column justify-content-center align-items-center">
+                <div class="card-custom shadow-lg p-4" style="max-width: 500px; width: 100%; border: 1px solid #ddd;">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold">UTP</h3>
+                        <p class="text-muted">Ambiente Seguro</p>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                        <span>Total a Pagar:</span>
+                        <span class="fs-4 fw-bold text-success">S/ 300.00</span>
+                    </div>
+
+                    <form onsubmit="procesarPagoLogin(event)">
+                        <div class="mb-3">
+                            <label class="small text-muted">Número de Tarjeta</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa fa-credit-card"></i></span>
+                                <input type="text" class="form-control" placeholder="0000 0000 0000 0000" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="small text-muted">Vencimiento</label>
+                                <input type="text" class="form-control" placeholder="MM/YY" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="small text-muted">CVV</label>
+                                <input type="password" class="form-control" placeholder="123" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="small text-muted">Titular</label>
+                            <input type="text" class="form-control" placeholder="Nombre como aparece en tarjeta" required>
+                        </div>
+                        
+                        <button type="submit" id="btnPagarGateway" class="btn btn-success w-100 py-2 fw-bold">PAGAR AHORA</button>
+                        <button type="button" onclick="cancelarPagoGateway()" class="btn btn-link w-100 mt-2 text-muted text-decoration-none">Cancelar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script src="js/login.js"></script>
